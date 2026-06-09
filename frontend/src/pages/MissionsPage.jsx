@@ -635,7 +635,7 @@ export default function MissionsPage() {
                 whileHover={{ scale: 1.04, boxShadow: `0 8px 32px ${theme.crimsonGlow}` }}
                 whileTap={{ scale: 0.97 }}
                 style={{ padding: "10px 24px", background: theme.crimson, border: "none", borderRadius: 6, color: "#F0EBE1", fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", cursor: "pointer" }}>
-                + Deploy Mission
+                + Create Mission
               </motion.button>
             </div>
 
