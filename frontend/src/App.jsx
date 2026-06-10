@@ -6,6 +6,7 @@ import MissionsPage from "./pages/MissionsPage";
 import MissionDetailPage from "./pages/MissionDetailPage";
 import AgentsPage from "./pages/AgentsPage";
 import OrchestratePage from "./pages/OrchestratePage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 
 function App() {
   return (
@@ -24,11 +25,14 @@ function App() {
         {/* Mission Details */}
         <Route path="/missions/:id" element={<MissionDetailPage />} />
 
-        {/* Agent Network */}
+        {/* Agents */}
         <Route path="/agents" element={<AgentsPage />} />
 
-        {/* AI Workspace */}
+        {/* Main AI Workspace */}
         <Route path="/orchestrate" element={<OrchestratePage />} />
+
+        {/* Analytics */}
+        <Route path="/analytics" element={<AnalyticsPage />} />
 
         {/* Fallback */}
         <Route path="*" element={<HomePage />} />

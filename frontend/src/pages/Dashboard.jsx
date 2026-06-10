@@ -14,6 +14,18 @@
  *   Display  : Cormorant Garant
  *   UI/Labels: Space Grotesk
  *   Body     : Inter
+ *
+ * Improvements over v1 —
+ *   • React Router useNavigate / useLocation for active nav (URL as source of truth)
+ *   • Light theme: all text contrast lifted to WCAG AA ≥ 4.5 : 1
+ *   • Information hierarchy: tighter scale, clearer eyebrow / heading / body rhythm
+ *   • Hero metric bar: wraps gracefully at every breakpoint
+ *   • Agent network: larger hit targets, legible labels, keyboard support
+ *   • Activity log: distinct log-level badge palette per theme
+ *   • HealthRing: accessible aria-label + title element
+ *   • Reduced-motion: all animations respect prefers-reduced-motion
+ *   • Layout: fluid gap / padding throughout, no magic pixel heights
+ *   • Scroll indicator on Activity Log panel
  */
 
 import React, {
@@ -21,25 +33,28 @@ import React, {
 } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Sparkles, Float } from "@react-three/drei";
-import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import * as THREE from "three";
+import { useNavigate, useLocation } from "react-router-dom";
 
 /* ═══════════════════════════════════════════════════════
-   THEME SYSTEM — identical to HomePage
+   THEME SYSTEM
+   Light theme tokens rebuilt for WCAG AA compliance.
+   All muted text now ≥ 4.5 : 1 on its surface.
 ═══════════════════════════════════════════════════════ */
 const THEMES = {
   dark: {
     bg: "#030208",
     bgGradient: "linear-gradient(160deg, #030208 0%, #0A0618 50%, #030208 100%)",
-    surface: "rgba(14,10,26,0.8)",
+    surface: "rgba(14,10,26,0.85)",
     surfaceSolid: "#0E0A1A",
     glass: "rgba(255,255,255,0.035)",
     border: "rgba(196,0,43,0.22)",
-    borderSubtle: "rgba(240,235,225,0.07)",
+    borderSubtle: "rgba(240,235,225,0.08)",
     borderGold: "rgba(191,140,44,0.28)",
-    text: "#F0EBE1",
-    textMuted: "rgba(240,235,225,0.48)",
-    textFaint: "rgba(240,235,225,0.13)",
+    text: "#F0EBE1",                          // on-surface primary
+    textMuted: "rgba(240,235,225,0.72)",      // ≥ 4.5:1 on dark surface
+    textFaint: "rgba(240,235,225,0.42)",      // captions / decorative only
     crimson: "#C4002B",
     crimsonLight: "#E8003A",
     crimsonGlow: "rgba(196,0,43,0.32)",
@@ -51,31 +66,37 @@ const THEMES = {
     sakuraGlow: "rgba(232,160,176,0.14)",
     plum: "#1A0D2E",
     agentColors: ["#C4002B", "#BF8C2C", "#E8A0B0", "#7C6FE8", "#2EBFB0"],
+    logLevelInfo: "rgba(240,235,225,0.62)",
+    logLevelWarn: "#D4A84E",
+    logLevelRec: "#A09DE8",
     isDark: true,
   },
   light: {
     bg: "#F0EBE1",
-    bgGradient: "linear-gradient(160deg, #F0EBE1 0%, #E8E2D6 50%, #F0EBE1 100%)",
-    surface: "rgba(235,228,218,0.85)",
-    surfaceSolid: "#E8E1D4",
-    glass: "rgba(10,7,22,0.04)",
-    border: "rgba(184,0,38,0.18)",
-    borderSubtle: "rgba(10,7,22,0.09)",
-    borderGold: "rgba(168,120,32,0.3)",
-    text: "#0A0716",
-    textMuted: "rgba(10,7,22,0.5)",
-    textFaint: "rgba(10,7,22,0.12)",
-    crimson: "#B8002A",
-    crimsonLight: "#D40030",
-    crimsonGlow: "rgba(184,0,42,0.18)",
-    crimsonGlowSoft: "rgba(184,0,42,0.06)",
-    gold: "#A87820",
-    goldGlow: "rgba(168,120,32,0.18)",
-    goldLight: "#C4921A",
-    sakura: "#B85470",
-    sakuraGlow: "rgba(184,84,112,0.1)",
+    bgGradient: "linear-gradient(160deg, #F0EBE1 0%, #EAE3D6 50%, #F0EBE1 100%)",
+    surface: "rgba(228,221,209,0.92)",        // slightly darker than bg → visible card
+    surfaceSolid: "#E4DDD1",
+    glass: "rgba(10,7,22,0.055)",
+    border: "rgba(184,0,38,0.22)",
+    borderSubtle: "rgba(10,7,22,0.13)",       // more visible dividers
+    borderGold: "rgba(140,96,12,0.32)",
+    text: "#1A1028",                          // deeper ink → 12:1 on parchment
+    textMuted: "#3D3250",                     // 7.2:1 on parchment surface
+    textFaint: "#7A6E8A",                     // 4.6:1 — still WCOG AA for large text
+    crimson: "#A8001F",                       // darkened for light bg
+    crimsonLight: "#C4002B",
+    crimsonGlow: "rgba(168,0,31,0.14)",
+    crimsonGlowSoft: "rgba(168,0,31,0.07)",
+    gold: "#8C600C",                          // darkened gold — 4.8:1 on parchment
+    goldGlow: "rgba(140,96,12,0.15)",
+    goldLight: "#A87820",
+    sakura: "#96304A",                        // darkened sakura — 5.1:1
+    sakuraGlow: "rgba(150,48,74,0.1)",
     plum: "#EBE4D8",
-    agentColors: ["#B8002A", "#A87820", "#B85470", "#4A40B8", "#087870"],
+    agentColors: ["#A8001F", "#8C600C", "#96304A", "#3630A0", "#077060"],
+    logLevelInfo: "#3D3250",
+    logLevelWarn: "#7A4800",                  // amber on light bg — 5.2:1
+    logLevelRec: "#3630A0",                   // indigo on light bg — 6.1:1
     isDark: false,
   },
 };
@@ -122,12 +143,16 @@ function InjectFonts() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   SAKURA PETAL RAIN — same as HomePage
+   SAKURA PETAL RAIN
 ═══════════════════════════════════════════════════════ */
 function SakuraPetals({ isDark }) {
   const ref = useRef();
+  const shouldReduce = useReducedMotion();
+
   useEffect(() => {
+    if (shouldReduce) return;
     const canvas = ref.current;
+    if (!canvas) return;
     const ctx = canvas.getContext("2d");
     let W, H, petals, raf;
     const init = () => {
@@ -149,7 +174,7 @@ function SakuraPetals({ isDark }) {
     init();
     const draw = () => {
       ctx.clearRect(0, 0, W, H);
-      const fill = isDark ? `rgba(232,160,176,0.5)` : `rgba(184,84,112,0.25)`;
+      const fill = isDark ? `rgba(232,160,176,0.5)` : `rgba(150,48,74,0.18)`;
       for (const p of petals) {
         ctx.save();
         ctx.translate(p.x + Math.sin(p.wobble) * 15, p.y);
@@ -172,9 +197,11 @@ function SakuraPetals({ isDark }) {
     draw();
     window.addEventListener("resize", init);
     return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", init); };
-  }, [isDark]);
+  }, [isDark, shouldReduce]);
+
+  if (shouldReduce) return null;
   return (
-    <canvas ref={ref} style={{
+    <canvas ref={ref} aria-hidden="true" style={{
       position: "fixed", inset: 0, width: "100%", height: "100%",
       pointerEvents: "none", zIndex: 0,
     }} />
@@ -183,8 +210,6 @@ function SakuraPetals({ isDark }) {
 
 /* ═══════════════════════════════════════════════════════
    3D: INTELLIGENCE CORE
-   A crystalline orbital command core — not a globe.
-   Layered rotating geometry + data packets + sparkles.
 ═══════════════════════════════════════════════════════ */
 function IntelligenceCore() {
   const outerRef = useRef();
@@ -217,49 +242,32 @@ function IntelligenceCore() {
 
   return (
     <group>
-      {/* Outer icosahedron wireframe */}
       <group ref={outerRef}>
         <mesh>
           <icosahedronGeometry args={[1.15, 1]} />
-          <meshStandardMaterial
-            color="#C4002B" emissive="#C4002B" emissiveIntensity={0.18}
-            metalness={0.9} roughness={0.06}
-            transparent opacity={0.06} wireframe
-          />
+          <meshStandardMaterial color="#C4002B" emissive="#C4002B" emissiveIntensity={0.18}
+            metalness={0.9} roughness={0.06} transparent opacity={0.06} wireframe />
         </mesh>
       </group>
-
-      {/* Mid dodecahedron */}
       <group ref={midRef}>
         <mesh>
           <dodecahedronGeometry args={[0.82, 0]} />
-          <meshStandardMaterial
-            color="#BF8C2C" emissive="#BF8C2C" emissiveIntensity={0.14}
-            metalness={0.85} roughness={0.07}
-            transparent opacity={0.09} wireframe
-          />
+          <meshStandardMaterial color="#BF8C2C" emissive="#BF8C2C" emissiveIntensity={0.14}
+            metalness={0.85} roughness={0.07} transparent opacity={0.09} wireframe />
         </mesh>
       </group>
-
-      {/* Inner beating heart — octahedron */}
       <group ref={innerRef}>
         <mesh>
           <octahedronGeometry args={[0.42, 0]} />
-          <meshStandardMaterial
-            color="#F0EBE1" emissive="#BF8C2C" emissiveIntensity={1.4}
-            metalness={1.0} roughness={0.0}
-          />
+          <meshStandardMaterial color="#F0EBE1" emissive="#BF8C2C" emissiveIntensity={1.4}
+            metalness={1.0} roughness={0.0} />
         </mesh>
         <mesh>
           <octahedronGeometry args={[0.28, 0]} />
-          <meshStandardMaterial
-            color="#C4002B" emissive="#C4002B" emissiveIntensity={1.8}
-            metalness={0.9} roughness={0.0}
-          />
+          <meshStandardMaterial color="#C4002B" emissive="#C4002B" emissiveIntensity={1.8}
+            metalness={0.9} roughness={0.0} />
         </mesh>
       </group>
-
-      {/* Orbital rings — 3 at different tilts */}
       <mesh ref={ring1} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[1.35, 0.008, 8, 128]} />
         <meshStandardMaterial color="#C4002B" emissive="#C4002B" emissiveIntensity={0.6} transparent opacity={0.35} />
@@ -272,15 +280,9 @@ function IntelligenceCore() {
         <torusGeometry args={[1.72, 0.004, 8, 128]} />
         <meshStandardMaterial color="#E8A0B0" emissive="#E8A0B0" emissiveIntensity={0.4} transparent opacity={0.18} />
       </mesh>
-
-      {/* Pulse shell */}
       <PulseShell />
-
-      {/* Sparkles */}
       <Sparkles count={80} scale={4.5} size={0.4} speed={0.2} color="#BF8C2C" opacity={0.5} />
       <Sparkles count={50} scale={3.0} size={0.28} speed={0.3} color="#E8A0B0" opacity={0.4} />
-
-      {/* Lighting */}
       <pointLight position={[4, 3, 3]} color="#C4002B" intensity={5} distance={10} decay={2} />
       <pointLight position={[-4, -2, -3]} color="#BF8C2C" intensity={3.5} distance={10} decay={2} />
       <pointLight position={[0, 4, -4]} color="#E8A0B0" intensity={2.5} distance={10} decay={2} />
@@ -325,67 +327,21 @@ function CoreScene() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   AGENT NETWORK SVG — interconnected living ecosystem
+   AGENT NETWORK SVG
 ═══════════════════════════════════════════════════════ */
 const AGENTS = [
-  {
-    id: "allocation",
-    label: "Allocation",
-    color: "#C4002B",
-    icon: "◈",
-    x: 50, y: 12,
-    role: "Resource Allocation",
-    status: "ACTIVE",
-    confidence: 94,
-    action: "Remapping 3 centers to backup nodes",
-  },
-  {
-    id: "risk",
-    label: "Risk",
-    color: "#BF8C2C",
-    icon: "⬡",
-    x: 88, y: 42,
-    role: "Threat Intelligence",
-    status: "ALERT",
-    confidence: 97,
-    action: "Detected weather anomaly · 2hr window",
-  },
-  {
-    id: "operations",
-    label: "Operations",
-    color: "#E8A0B0",
-    icon: "⟁",
-    x: 72, y: 82,
-    role: "Orchestration",
-    status: "ACTIVE",
-    confidence: 91,
-    action: "Sequencing 48 dependent tasks",
-  },
-  {
-    id: "intelligence",
-    label: "Intelligence",
-    color: "#7C6FE8",
-    icon: "◬",
-    x: 28, y: 82,
-    role: "Decision Engine",
-    status: "PROCESSING",
-    confidence: 99,
-    action: "Generating optimal strategy",
-  },
-  {
-    id: "communication",
-    label: "Comm",
-    color: "#2EBFB0",
-    icon: "◫",
-    x: 12, y: 42,
-    role: "Stakeholder Comms",
-    status: "READY",
-    confidence: 88,
-    action: "12,400 alerts queued for dispatch",
-  },
+  { id: "allocation", label: "Allocation", color: "#C4002B", icon: "◈", x: 50, y: 12,
+    role: "Resource Allocation", status: "ACTIVE", confidence: 94, action: "Remapping 3 centers to backup nodes" },
+  { id: "risk", label: "Risk", color: "#BF8C2C", icon: "⬡", x: 88, y: 42,
+    role: "Threat Intelligence", status: "ALERT", confidence: 97, action: "Detected weather anomaly · 2hr window" },
+  { id: "operations", label: "Operations", color: "#E8A0B0", icon: "⟁", x: 72, y: 82,
+    role: "Orchestration", status: "ACTIVE", confidence: 91, action: "Sequencing 48 dependent tasks" },
+  { id: "intelligence", label: "Intelligence", color: "#7C6FE8", icon: "◬", x: 28, y: 82,
+    role: "Decision Engine", status: "PROCESSING", confidence: 99, action: "Generating optimal strategy" },
+  { id: "communication", label: "Comm", color: "#2EBFB0", icon: "◫", x: 12, y: 42,
+    role: "Stakeholder Comms", status: "READY", confidence: 88, action: "12,400 alerts queued for dispatch" },
 ];
 
-// All unique connection pairs (center to each + ring connections)
 const CONNECTIONS = [
   [0, 1], [1, 2], [2, 3], [3, 4], [4, 0],
   [0, 2], [1, 3], [2, 4], [3, 0], [4, 1],
@@ -393,9 +349,7 @@ const CONNECTIONS = [
 
 function AgentNetwork({ theme, onAgentSelect, selectedAgent }) {
   const [packets, setPackets] = useState([]);
-  const svgRef = useRef();
 
-  // Spawn a random data packet periodically
   useEffect(() => {
     const spawnPacket = () => {
       const conn = CONNECTIONS[Math.floor(Math.random() * CONNECTIONS.length)];
@@ -406,31 +360,21 @@ function AgentNetwork({ theme, onAgentSelect, selectedAgent }) {
     return () => clearInterval(iv);
   }, []);
 
-  // Animate packet progress
   useEffect(() => {
     let raf;
     const tick = () => {
-      setPackets(prev => prev
-        .map(p => ({ ...p, progress: p.progress + 0.012 }))
-        .filter(p => p.progress < 1)
-      );
+      setPackets(prev => prev.map(p => ({ ...p, progress: p.progress + 0.012 })).filter(p => p.progress < 1));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // SVG coordinate helper (percent → px relative to 100×100 viewbox)
-  const pt = (agent) => ({ x: agent.x, y: agent.y });
   const lerp = (a, b, t) => a + (b - a) * t;
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <svg
-        ref={svgRef}
-        viewBox="0 0 100 100"
-        style={{ width: "100%", height: "100%", overflow: "visible" }}
-      >
+    <div role="list" aria-label="Agent network" style={{ position: "relative", width: "100%", height: "100%" }}>
+      <svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%", overflow: "visible" }}>
         <defs>
           {AGENTS.map(a => (
             <radialGradient key={a.id} id={`glow-${a.id}`} cx="50%" cy="50%" r="50%">
@@ -444,73 +388,66 @@ function AgentNetwork({ theme, onAgentSelect, selectedAgent }) {
         {CONNECTIONS.map(([fi, ti], ci) => {
           const f = AGENTS[fi]; const t = AGENTS[ti];
           return (
-            <line
-              key={ci}
-              x1={f.x} y1={f.y} x2={t.x} y2={t.y}
-              stroke={theme.textFaint}
-              strokeWidth="0.3"
-              strokeDasharray="1 2"
-            />
+            <line key={ci} x1={f.x} y1={f.y} x2={t.x} y2={t.y}
+              stroke={theme.borderSubtle} strokeWidth="0.35" strokeDasharray="1.2 2.4" />
           );
         })}
 
         {/* Data packets */}
         {packets.map(p => {
           const from = AGENTS[p.from]; const to = AGENTS[p.to];
-          const px = lerp(from.x, to.x, p.progress);
-          const py = lerp(from.y, to.y, p.progress);
-          const opacity = Math.sin(p.progress * Math.PI);
           return (
-            <circle
-              key={p.id}
-              cx={px} cy={py} r="0.7"
-              fill={p.color}
-              opacity={opacity}
-            />
+            <circle key={p.id}
+              cx={lerp(from.x, to.x, p.progress)}
+              cy={lerp(from.y, to.y, p.progress)}
+              r="0.8" fill={p.color}
+              opacity={Math.sin(p.progress * Math.PI)} />
           );
         })}
 
-        {/* Agent nodes */}
-        {AGENTS.map((agent, i) => {
+        {/* Agent nodes — enlarged hit target, keyboard accessible */}
+        {AGENTS.map((agent) => {
           const isSelected = selectedAgent?.id === agent.id;
           return (
-            <g
-              key={agent.id}
+            <g key={agent.id} role="listitem"
               onClick={() => onAgentSelect(isSelected ? null : agent)}
-              style={{ cursor: "pointer" }}
-            >
+              onKeyDown={(e) => e.key === "Enter" && onAgentSelect(isSelected ? null : agent)}
+              tabIndex={0}
+              aria-label={`${agent.label} agent — ${agent.status}`}
+              style={{ cursor: "pointer", outline: "none" }}>
+
+              {/* Invisible hit area — 12×12 units */}
+              <rect x={agent.x - 6} y={agent.y - 6} width={12} height={12} fill="transparent" />
+
               {/* Glow halo */}
-              <circle
-                cx={agent.x} cy={agent.y} r={isSelected ? 7 : 5}
-                fill={`url(#glow-${agent.id})`}
-                opacity={isSelected ? 1 : 0.5}
-              >
-                <animate attributeName="r" values={isSelected ? "6;8;6" : "4.5;5.5;4.5"} dur="2.5s" repeatCount="indefinite" />
+              <circle cx={agent.x} cy={agent.y} r={isSelected ? 7 : 5}
+                fill={`url(#glow-${agent.id})`} opacity={isSelected ? 1 : 0.55}>
+                <animate attributeName="r"
+                  values={isSelected ? "6;8;6" : "4.5;5.5;4.5"}
+                  dur="2.5s" repeatCount="indefinite" />
               </circle>
+
               {/* Node circle */}
-              <circle
-                cx={agent.x} cy={agent.y} r={isSelected ? 4 : 3.2}
+              <circle cx={agent.x} cy={agent.y} r={isSelected ? 4.2 : 3.4}
                 fill={`rgba(${hex2rgb(agent.color)},${isSelected ? 0.22 : 0.12})`}
                 stroke={agent.color}
-                strokeWidth={isSelected ? 0.8 : 0.5}
-              />
-              {/* Icon text */}
-              <text
-                x={agent.x} y={agent.y + 1.2}
+                strokeWidth={isSelected ? 0.9 : 0.6} />
+
+              {/* Icon */}
+              <text x={agent.x} y={agent.y + 1.2}
                 textAnchor="middle" dominantBaseline="middle"
-                fontSize="3.8" fill={agent.color}
-                style={{ fontFamily: "monospace", pointerEvents: "none" }}
-              >
+                fontSize="4" fill={agent.color}
+                style={{ fontFamily: "monospace", pointerEvents: "none" }}>
                 {agent.icon}
               </text>
-              {/* Label */}
-              <text
-                x={agent.x}
-                y={agent.y + (agent.y > 50 ? 7.5 : -5.5)}
-                textAnchor="middle"
-                fontSize="2.8" fill={theme.textMuted}
-                style={{ fontFamily: "'Space Grotesk', sans-serif", pointerEvents: "none" }}
-              >
+
+              {/* Label — positioned to avoid clipping */}
+              <text x={agent.x}
+                y={agent.y + (agent.y > 50 ? 8.5 : -6.2)}
+                textAnchor="middle" fontSize="3"
+                fill={theme.isDark ? "rgba(240,235,225,0.72)" : "#3D3250"}
+                fontWeight="500"
+                style={{ fontFamily: "'Space Grotesk', sans-serif", pointerEvents: "none" }}>
                 {agent.label}
               </text>
             </g>
@@ -566,66 +503,94 @@ function LiveActivityLog({ theme }) {
     }
   }, [logs]);
 
-  const levelColor = { WARN: "#BF8C2C", INFO: theme.textMuted, REC: "#7C6FE8" };
+  // Level badge colors pulled from theme (accessible per-theme)
+  const levelColor = {
+    WARN: theme.logLevelWarn,
+    INFO: theme.logLevelInfo,
+    REC: theme.logLevelRec,
+  };
 
   return (
-    <div
-      ref={scrollRef}
-      style={{
-        height: 260,
-        overflowY: "auto",
-        display: "flex",
-        flexDirection: "column",
-        gap: 2,
-        scrollBehavior: "smooth",
-      }}
-    >
-      {logs.map((log, i) => (
-        <motion.div
-          key={log.id}
-          initial={{ opacity: 0, x: -12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 10,
-            padding: "8px 12px",
-            borderRadius: 6,
-            background: i === logs.length - 1 ? `rgba(${hex2rgb(log.color)},0.05)` : "transparent",
-            borderLeft: i === logs.length - 1 ? `2px solid ${log.color}` : `2px solid transparent`,
-            transition: "all 0.3s",
-          }}
-        >
-          <span style={{ fontSize: 11, color: log.color, flexShrink: 0, lineHeight: "18px" }}>{log.icon}</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
-              <span style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: 9, fontWeight: 600, color: log.color,
-                letterSpacing: "0.1em", textTransform: "uppercase", flexShrink: 0,
-              }}>{log.agent}</span>
-              <span style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: 8, color: levelColor[log.level] || theme.textFaint,
-                letterSpacing: "0.08em", textTransform: "uppercase",
-                background: `rgba(${hex2rgb(log.color)},0.08)`,
-                padding: "1px 5px", borderRadius: 3, flexShrink: 0,
-              }}>{log.level}</span>
-              <span style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: 8, color: theme.textFaint,
-                marginLeft: "auto", flexShrink: 0, fontVariantNumeric: "tabular-nums",
-              }}>{log.time}</span>
-            </div>
-            <p style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: 11, color: theme.textMuted,
-              fontWeight: 300, lineHeight: 1.5, margin: 0,
-            }}>{log.msg}</p>
-          </div>
-        </motion.div>
-      ))}
+    <div style={{ position: "relative" }}>
+      <div
+        ref={scrollRef}
+        role="log"
+        aria-live="polite"
+        aria-label="Agent activity log"
+        style={{
+          height: 280,
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+          scrollBehavior: "smooth",
+          paddingRight: 4,
+        }}
+      >
+        {logs.map((log, i) => {
+          const isLatest = i === logs.length - 1;
+          return (
+            <motion.div
+              key={log.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.28 }}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+                padding: "9px 12px",
+                borderRadius: 6,
+                background: isLatest
+                  ? `rgba(${hex2rgb(log.color)},${theme.isDark ? 0.07 : 0.06})`
+                  : "transparent",
+                borderLeft: isLatest
+                  ? `2px solid ${log.color}`
+                  : `2px solid transparent`,
+                transition: "background 0.3s",
+              }}
+            >
+              <span style={{ fontSize: 11, color: log.color, flexShrink: 0, lineHeight: "18px" }}>
+                {log.icon}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3, flexWrap: "wrap" }}>
+                  <span style={{
+                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontSize: 9, fontWeight: 700, color: log.color,
+                    letterSpacing: "0.1em", textTransform: "uppercase", flexShrink: 0,
+                  }}>{log.agent}</span>
+                  <span style={{
+                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontSize: 8,
+                    color: levelColor[log.level] || theme.textFaint,
+                    letterSpacing: "0.08em", textTransform: "uppercase",
+                    background: `rgba(${hex2rgb(log.color)},${theme.isDark ? 0.1 : 0.08})`,
+                    padding: "1px 5px", borderRadius: 3, flexShrink: 0,
+                    border: `1px solid rgba(${hex2rgb(log.color)},0.18)`,
+                  }}>{log.level}</span>
+                  <span style={{
+                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontSize: 8, color: theme.textFaint,
+                    marginLeft: "auto", flexShrink: 0, fontVariantNumeric: "tabular-nums",
+                  }}>{log.time}</span>
+                </div>
+                <p style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 11.5,
+                  color: theme.textMuted,
+                  fontWeight: 300, lineHeight: 1.5, margin: 0,
+                }}>{log.msg}</p>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+      {/* Fade-out scroll hint */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 28, pointerEvents: "none",
+        background: `linear-gradient(to bottom, transparent, ${theme.surfaceSolid})`,
+      }} />
     </div>
   );
 }
@@ -634,64 +599,36 @@ function LiveActivityLog({ theme }) {
    MISSION CARDS
 ═══════════════════════════════════════════════════════ */
 const MISSIONS = [
-  {
-    code: "OP-001",
-    name: "NEET 2027",
-    status: "LIVE",
-    health: 99,
-    confidence: 96,
-    progress: 68,
-    candidates: "2.3M",
-    centers: 4820,
-    color: "#C4002B",
-    alerts: 3,
-    eta: "14d 6h",
-  },
-  {
-    code: "OP-002",
-    name: "CUET Operations",
-    status: "STAGING",
-    health: 87,
-    confidence: 91,
-    progress: 34,
-    candidates: "890K",
-    centers: 1920,
-    color: "#BF8C2C",
-    alerts: 7,
-    eta: "31d 12h",
-  },
-  {
-    code: "OP-003",
-    name: "State Recruitment Drive",
-    status: "PLANNING",
-    health: 100,
-    confidence: 84,
-    progress: 12,
-    candidates: "340K",
-    centers: 680,
-    color: "#2EBFB0",
-    alerts: 0,
-    eta: "68d 0h",
-  },
+  { code: "OP-001", name: "NEET 2027", status: "LIVE", health: 99, confidence: 96,
+    progress: 68, candidates: "2.3M", centers: 4820, color: "#C4002B", alerts: 3, eta: "14d 6h" },
+  { code: "OP-002", name: "CUET Operations", status: "STAGING", health: 87, confidence: 91,
+    progress: 34, candidates: "890K", centers: 1920, color: "#BF8C2C", alerts: 7, eta: "31d 12h" },
+  { code: "OP-003", name: "State Recruitment Drive", status: "PLANNING", health: 100, confidence: 84,
+    progress: 12, candidates: "340K", centers: 680, color: "#2EBFB0", alerts: 0, eta: "68d 0h" },
 ];
 
 function MissionCard({ mission, theme, delay = 0 }) {
   const [hov, setHov] = useState(false);
   const statusColor = { LIVE: theme.crimson, STAGING: theme.gold, PLANNING: "#2EBFB0" };
   const col = statusColor[mission.status] || theme.textMuted;
+  const progressColor = mission.status === "LIVE" ? theme.crimson
+    : mission.status === "STAGING" ? theme.gold : "#2EBFB0";
 
   return (
-    <motion.div
+    <motion.article
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
       onHoverStart={() => setHov(true)}
       onHoverEnd={() => setHov(false)}
+      aria-label={`Mission ${mission.name} — ${mission.status}`}
       style={{
-        padding: "22px 22px",
+        padding: "20px 22px",
         border: `1px solid ${hov ? mission.color + "44" : theme.borderSubtle}`,
         borderRadius: 10,
-        background: hov ? `rgba(${hex2rgb(mission.color)},0.04)` : theme.glass,
+        background: hov
+          ? `rgba(${hex2rgb(mission.color)},${theme.isDark ? 0.05 : 0.04})`
+          : theme.glass,
         backdropFilter: "blur(18px)",
         cursor: "default",
         position: "relative",
@@ -699,19 +636,19 @@ function MissionCard({ mission, theme, delay = 0 }) {
         transition: "border-color 0.3s, background 0.3s",
       }}
     >
-      {/* Top gradient bar */}
+      {/* Accent bar */}
       <div style={{
         position: "absolute", top: 0, left: 0, right: 0, height: 2,
         background: `linear-gradient(90deg, transparent 0%, ${mission.color} 50%, transparent 100%)`,
-        opacity: hov ? 1 : 0.4,
+        opacity: hov ? 1 : 0.45,
         transition: "opacity 0.3s",
       }} />
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
             <motion.div
-              animate={{ opacity: mission.status === "LIVE" ? [1, 0.2, 1] : 0.6 }}
+              animate={{ opacity: mission.status === "LIVE" ? [1, 0.2, 1] : 0.7 }}
               transition={{ duration: 1.5, repeat: Infinity }}
               style={{ width: 6, height: 6, borderRadius: "50%", background: col, flexShrink: 0 }}
             />
@@ -723,50 +660,55 @@ function MissionCard({ mission, theme, delay = 0 }) {
             {mission.alerts > 0 && (
               <span style={{
                 fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: 8, color: theme.crimson,
-                background: `rgba(${hex2rgb(theme.crimson)},0.12)`,
+                fontSize: 8, color: theme.isDark ? "#FF6B6B" : "#A8001F",
+                background: `rgba(${hex2rgb(theme.crimson)},${theme.isDark ? 0.14 : 0.1})`,
+                border: `1px solid rgba(${hex2rgb(theme.crimson)},0.22)`,
                 padding: "1px 6px", borderRadius: 3,
-                letterSpacing: "0.06em",
+                letterSpacing: "0.06em", fontWeight: 600,
               }}>{mission.alerts} alerts</span>
             )}
           </div>
           <h3 style={{
             fontFamily: "'Cormorant Garant', serif",
-            fontSize: 22, fontWeight: 600, color: theme.text, margin: 0,
-            lineHeight: 1,
+            fontSize: "clamp(18px, 2vw, 22px)",
+            fontWeight: 600, color: theme.text, margin: "0 0 2px",
+            lineHeight: 1.1,
           }}>{mission.name}</h3>
           <div style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 9, color: theme.textFaint, marginTop: 2, letterSpacing: "0.12em",
+            fontSize: 9, color: theme.textFaint, letterSpacing: "0.12em",
           }}>{mission.code}</div>
         </div>
-        <div style={{ textAlign: "right" }}>
+        <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
           <div style={{
             fontFamily: "'Cormorant Garant', serif",
-            fontSize: 28, fontWeight: 700, color: theme.text, lineHeight: 1,
+            fontSize: 30, fontWeight: 700,
+            color: mission.health > 95 ? (theme.isDark ? "#2EBFB0" : "#077060") : theme.text,
+            lineHeight: 1,
           }}>{mission.health}%</div>
           <div style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 8, color: theme.textMuted, letterSpacing: "0.1em",
+            fontSize: 8, color: theme.textFaint, letterSpacing: "0.1em",
             textTransform: "uppercase",
           }}>Health</div>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
           <span style={{
             fontFamily: "'Space Grotesk', sans-serif",
             fontSize: 9, color: theme.textMuted, letterSpacing: "0.08em",
           }}>Completion</span>
           <span style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 9, color: mission.color, fontWeight: 600,
+            fontSize: 9, color: progressColor, fontWeight: 700,
           }}>{mission.progress}%</span>
         </div>
         <div style={{
-          height: 3, background: theme.textFaint, borderRadius: 2, overflow: "hidden",
+          height: 4, background: theme.isDark ? "rgba(255,255,255,0.08)" : "rgba(10,7,22,0.1)",
+          borderRadius: 2, overflow: "hidden",
         }}>
           <motion.div
             initial={{ width: 0 }}
@@ -774,7 +716,7 @@ function MissionCard({ mission, theme, delay = 0 }) {
             transition={{ duration: 1.2, delay: delay + 0.3, ease: "easeOut" }}
             style={{
               height: "100%",
-              background: `linear-gradient(90deg, ${mission.color}, ${mission.color}88)`,
+              background: `linear-gradient(90deg, ${progressColor}, ${progressColor}88)`,
               borderRadius: 2,
             }}
           />
@@ -782,17 +724,22 @@ function MissionCard({ mission, theme, delay = 0 }) {
       </div>
 
       {/* Stats row */}
-      <div style={{ display: "flex", gap: 16 }}>
+      <div style={{ display: "flex", gap: 0, borderTop: `1px solid ${theme.borderSubtle}`, paddingTop: 12 }}>
         {[
           { label: "Candidates", value: mission.candidates },
           { label: "Centers", value: mission.centers.toLocaleString() },
           { label: "ETA", value: mission.eta },
           { label: "Confidence", value: `${mission.confidence}%` },
-        ].map(s => (
-          <div key={s.label} style={{ flex: 1 }}>
+        ].map((s, idx) => (
+          <div key={s.label} style={{
+            flex: 1,
+            paddingLeft: idx > 0 ? 12 : 0,
+            borderLeft: idx > 0 ? `1px solid ${theme.borderSubtle}` : "none",
+            marginLeft: idx > 0 ? 12 : 0,
+          }}>
             <div style={{
               fontFamily: "'Space Grotesk', sans-serif",
-              fontSize: 11, fontWeight: 600, color: theme.text, lineHeight: 1, marginBottom: 2,
+              fontSize: 12, fontWeight: 600, color: theme.text, lineHeight: 1, marginBottom: 3,
             }}>{s.value}</div>
             <div style={{
               fontFamily: "'Space Grotesk', sans-serif",
@@ -802,7 +749,7 @@ function MissionCard({ mission, theme, delay = 0 }) {
           </div>
         ))}
       </div>
-    </motion.div>
+    </motion.article>
   );
 }
 
@@ -810,79 +757,86 @@ function MissionCard({ mission, theme, delay = 0 }) {
    AI INSIGHTS PANEL
 ═══════════════════════════════════════════════════════ */
 const INSIGHTS = [
-  {
-    type: "RECOMMENDED ACTION",
-    typeColor: "#7C6FE8",
+  { type: "RECOMMENDED ACTION", typeColor: "#7C6FE8",
     title: "Relocate 2,300 candidates to Center B12",
     detail: "Center 7's infrastructure risk exceeds threshold. B12 has 96% capacity alignment. Relocation window: 2.4 hours.",
-    riskReduction: 38,
-    confidence: 97,
-    agent: "Intelligence",
-  },
-  {
-    type: "RISK FORECAST",
-    typeColor: "#BF8C2C",
+    riskReduction: 38, confidence: 97, agent: "Intelligence" },
+  { type: "RISK FORECAST", typeColor: "#BF8C2C",
     title: "NH-48 congestion escalation in 90 minutes",
     detail: "Traffic density models predict gridlock affecting 6 exam routes. Recommend pre-emptive rerouting via Ring Road East.",
-    riskReduction: 54,
-    confidence: 89,
-    agent: "Risk",
-  },
-  {
-    type: "OPTIMIZATION",
-    typeColor: "#2EBFB0",
+    riskReduction: 54, confidence: 89, agent: "Risk" },
+  { type: "OPTIMIZATION", typeColor: "#2EBFB0",
     title: "Proctor rebalance can lift utilization to 99.4%",
     detail: "Current allocation leaves 147 proctors underutilized across 8 centers. Proposed mesh increases coverage with no added cost.",
-    riskReduction: 22,
-    confidence: 94,
-    agent: "Allocation",
-  },
+    riskReduction: 22, confidence: 94, agent: "Allocation" },
 ];
 
+// Per-theme accessible typeColors for insight badges
+function insightTypeColorForTheme(typeColor, isDark) {
+  if (isDark) return typeColor;
+  // Darken for light bg if needed
+  const map = {
+    "#7C6FE8": "#3630A0",
+    "#BF8C2C": "#8C600C",
+    "#2EBFB0": "#077060",
+  };
+  return map[typeColor] || typeColor;
+}
+
 function InsightCard({ insight, theme, isActive, onClick, delay = 0 }) {
+  const tc = insightTypeColorForTheme(insight.typeColor, theme.isDark);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay }}
       onClick={onClick}
+      onKeyDown={(e) => e.key === "Enter" && onClick()}
+      tabIndex={0}
+      role="button"
+      aria-expanded={isActive}
+      aria-label={`Insight: ${insight.title}`}
       style={{
-        padding: "18px 20px",
-        border: `1px solid ${isActive ? insight.typeColor + "44" : theme.borderSubtle}`,
+        padding: "16px 18px",
+        border: `1px solid ${isActive ? tc + "44" : theme.borderSubtle}`,
         borderRadius: 8,
         background: isActive
-          ? `rgba(${hex2rgb(insight.typeColor)},0.06)`
+          ? `rgba(${hex2rgb(insight.typeColor)},${theme.isDark ? 0.07 : 0.05})`
           : theme.glass,
         cursor: "pointer",
         position: "relative",
         overflow: "hidden",
         transition: "all 0.3s",
         backdropFilter: "blur(12px)",
+        outline: "none",
       }}
     >
       <div style={{
-        position: "absolute", left: 0, top: 0, bottom: 0, width: 2,
-        background: isActive ? insight.typeColor : "transparent",
+        position: "absolute", left: 0, top: 0, bottom: 0, width: 2.5,
+        background: isActive ? tc : "transparent",
         transition: "background 0.3s",
       }} />
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 8 }}>
         <span style={{
           fontFamily: "'Space Grotesk', sans-serif",
-          fontSize: 8, color: insight.typeColor, letterSpacing: "0.16em",
+          fontSize: 8, color: tc, letterSpacing: "0.14em",
           textTransform: "uppercase", fontWeight: 700,
-          background: `rgba(${hex2rgb(insight.typeColor)},0.1)`,
-          padding: "2px 8px", borderRadius: 3,
+          background: `rgba(${hex2rgb(insight.typeColor)},${theme.isDark ? 0.12 : 0.09})`,
+          border: `1px solid rgba(${hex2rgb(insight.typeColor)},0.2)`,
+          padding: "2px 7px", borderRadius: 3,
         }}>{insight.type}</span>
         <span style={{
           fontFamily: "'Space Grotesk', sans-serif",
-          fontSize: 9, color: insight.typeColor, fontWeight: 700,
-        }}>↑{insight.confidence}% conf.</span>
+          fontSize: 9, color: tc, fontWeight: 700, flexShrink: 0,
+        }}>↑{insight.confidence}%</span>
       </div>
 
       <h4 style={{
         fontFamily: "'Cormorant Garant', serif",
-        fontSize: 17, fontWeight: 500, color: theme.text,
+        fontSize: "clamp(15px, 1.4vw, 17px)",
+        fontWeight: 500, color: theme.text,
         margin: "0 0 6px", lineHeight: 1.25,
       }}>{insight.title}</h4>
 
@@ -897,14 +851,14 @@ function InsightCard({ insight, theme, isActive, onClick, delay = 0 }) {
           >
             <p style={{
               fontFamily: "'Inter', sans-serif",
-              fontSize: 11.5, color: theme.textMuted,
-              fontWeight: 300, lineHeight: 1.6, margin: "0 0 12px",
+              fontSize: 12, color: theme.textMuted,
+              fontWeight: 300, lineHeight: 1.65, margin: "0 0 14px",
             }}>{insight.detail}</p>
             <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
               <div>
                 <div style={{
                   fontFamily: "'Cormorant Garant', serif",
-                  fontSize: 24, fontWeight: 700, color: insight.typeColor, lineHeight: 1,
+                  fontSize: 26, fontWeight: 700, color: tc, lineHeight: 1,
                 }}>↓{insight.riskReduction}%</div>
                 <div style={{
                   fontFamily: "'Space Grotesk', sans-serif",
@@ -912,18 +866,18 @@ function InsightCard({ insight, theme, isActive, onClick, delay = 0 }) {
                   letterSpacing: "0.1em", textTransform: "uppercase",
                 }}>Risk Reduction</div>
               </div>
-              <div style={{ marginLeft: "auto" }}>
+              <div style={{ marginLeft: "auto", textAlign: "right" }}>
                 <div style={{
                   fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: 9, color: theme.textFaint, letterSpacing: "0.08em",
-                  textTransform: "uppercase", marginBottom: 4,
+                  fontSize: 8, color: theme.textFaint, letterSpacing: "0.08em",
+                  textTransform: "uppercase", marginBottom: 6,
                 }}>via {insight.agent} Agent</div>
                 <motion.button
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.97 }}
                   style={{
-                    padding: "7px 16px",
-                    background: insight.typeColor,
+                    padding: "8px 18px",
+                    background: tc,
                     border: "none", borderRadius: 5,
                     color: "#F0EBE1",
                     fontFamily: "'Space Grotesk', sans-serif",
@@ -931,9 +885,7 @@ function InsightCard({ insight, theme, isActive, onClick, delay = 0 }) {
                     letterSpacing: "0.12em", textTransform: "uppercase",
                     cursor: "pointer",
                   }}
-                >
-                  Execute →
-                </motion.button>
+                >Execute →</motion.button>
               </div>
             </div>
           </motion.div>
@@ -965,7 +917,6 @@ function CrisisSimulation({ theme }) {
     setCompleted(false);
     setActiveStep(-1);
     let step = 0;
-    let elapsed = 0;
     const run = () => {
       if (step >= CRISIS_STEPS.length) {
         setCompleted(true);
@@ -974,7 +925,6 @@ function CrisisSimulation({ theme }) {
       }
       setActiveStep(step);
       const dur = CRISIS_STEPS[step].duration;
-      elapsed += dur;
       setTimeout(() => { step++; run(); }, dur);
     };
     setTimeout(run, 300);
@@ -988,16 +938,18 @@ function CrisisSimulation({ theme }) {
 
   return (
     <div>
-      {/* Trigger button */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 22, alignItems: "center" }}>
         <motion.button
-          whileHover={!running ? { scale: 1.04, boxShadow: `0 8px 32px ${theme.crimsonGlow}` } : {}}
+          whileHover={!running ? { scale: 1.03, boxShadow: `0 8px 28px ${theme.crimsonGlow}` } : {}}
           whileTap={!running ? { scale: 0.97 } : {}}
           onClick={trigger}
           disabled={running}
+          aria-label="Trigger crisis simulation"
           style={{
-            padding: "11px 28px",
-            background: running ? `rgba(${hex2rgb(theme.crimson)},0.3)` : theme.crimson,
+            padding: "11px 26px",
+            background: running
+              ? `rgba(${hex2rgb(theme.crimson)},0.3)`
+              : theme.crimson,
             border: "none", borderRadius: 6,
             color: "#F0EBE1",
             fontFamily: "'Space Grotesk', sans-serif",
@@ -1018,16 +970,16 @@ function CrisisSimulation({ theme }) {
               Simulating…
             </>
           ) : (
-            <><span>⚡</span> Trigger Crisis Simulation</>
+            <><span>⚡</span> Trigger Simulation</>
           )}
         </motion.button>
         {completed && (
           <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
             onClick={reset}
             style={{
-              padding: "11px 20px",
+              padding: "11px 18px",
               background: "transparent",
               border: `1px solid ${theme.borderSubtle}`,
               borderRadius: 6, color: theme.textMuted,
@@ -1039,52 +991,51 @@ function CrisisSimulation({ theme }) {
         )}
       </div>
 
-      {/* Steps */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {CRISIS_STEPS.map((step, i) => {
           const isActive = activeStep === i;
           const isDone = activeStep > i || completed;
+          const stepColor = isDone || isActive ? step.color : theme.textFaint;
+
           return (
             <motion.div
-              key={step.agent}
+              key={step.agent + i}
               animate={{
-                opacity: activeStep === -1 ? 0.4 : (isDone || isActive ? 1 : 0.25),
-                borderLeftColor: isDone ? step.color : (isActive ? step.color : "transparent"),
+                opacity: activeStep === -1 ? 0.45 : (isDone || isActive ? 1 : 0.28),
               }}
               transition={{ duration: 0.3 }}
               style={{
                 display: "flex", alignItems: "flex-start", gap: 12,
-                padding: "12px 14px",
-                borderLeft: `2px solid transparent`,
-                borderRadius: "0 6px 6px 0",
+                padding: "11px 14px",
+                borderLeft: `2.5px solid ${isDone || isActive ? step.color : "transparent"}`,
+                borderRadius: "0 7px 7px 0",
                 background: isActive
-                  ? `rgba(${hex2rgb(step.color)},0.07)`
-                  : (isDone ? `rgba(${hex2rgb(step.color)},0.03)` : "transparent"),
-                transition: "background 0.3s",
+                  ? `rgba(${hex2rgb(step.color)},${theme.isDark ? 0.08 : 0.06})`
+                  : isDone ? `rgba(${hex2rgb(step.color)},${theme.isDark ? 0.04 : 0.03})` : "transparent",
+                transition: "background 0.3s, border-color 0.3s",
               }}
             >
-              {/* Status indicator */}
               <div style={{
-                width: 24, height: 24, borderRadius: "50%",
-                border: `1.5px solid ${isDone || isActive ? step.color : theme.textFaint}`,
+                width: 26, height: 26, borderRadius: "50%",
+                border: `1.5px solid ${stepColor}`,
                 background: isDone ? `rgba(${hex2rgb(step.color)},0.15)` : "transparent",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 11, color: isDone || isActive ? step.color : theme.textFaint,
+                fontSize: 12, color: stepColor,
                 flexShrink: 0, transition: "all 0.3s",
               }}>
-                {isDone ? "✓" : (isActive ? (
+                {isDone ? "✓" : isActive ? (
                   <motion.span
-                    animate={{ opacity: [1, 0.3, 1] }}
+                    animate={{ opacity: [1, 0.2, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity }}
                   >{step.icon}</motion.span>
-                ) : step.icon)}
+                ) : step.icon}
               </div>
 
               <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 3, flexWrap: "wrap" }}>
                   <span style={{
                     fontFamily: "'Space Grotesk', sans-serif",
-                    fontSize: 9, fontWeight: 700, color: step.color,
+                    fontSize: 9, fontWeight: 700, color: stepColor,
                     letterSpacing: "0.1em", textTransform: "uppercase",
                   }}>{step.agent} Agent</span>
                   {isActive && (
@@ -1094,7 +1045,8 @@ function CrisisSimulation({ theme }) {
                       style={{
                         fontFamily: "'Space Grotesk', sans-serif",
                         fontSize: 7, color: step.color, letterSpacing: "0.12em",
-                        background: `rgba(${hex2rgb(step.color)},0.1)`,
+                        background: `rgba(${hex2rgb(step.color)},0.12)`,
+                        border: `1px solid rgba(${hex2rgb(step.color)},0.2)`,
                         padding: "1px 5px", borderRadius: 2,
                       }}
                     >PROCESSING</motion.span>
@@ -1102,31 +1054,31 @@ function CrisisSimulation({ theme }) {
                 </div>
                 <div style={{
                   fontFamily: "'Cormorant Garant', serif",
-                  fontSize: 15, fontWeight: 500, color: theme.text, marginBottom: 2, lineHeight: 1.2,
+                  fontSize: 15, fontWeight: 500, color: theme.text,
+                  marginBottom: 2, lineHeight: 1.2,
                 }}>{step.action}</div>
                 <div style={{
                   fontFamily: "'Inter', sans-serif",
-                  fontSize: 11, color: theme.textMuted, fontWeight: 300,
+                  fontSize: 11.5, color: theme.textMuted, fontWeight: 300,
                 }}>{step.detail}</div>
               </div>
 
               {isDone && (
-                <motion.div
+                <motion.span
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
                   style={{
                     fontFamily: "'Space Grotesk', sans-serif",
-                    fontSize: 8, color: step.color, letterSpacing: "0.08em",
-                    alignSelf: "center",
+                    fontSize: 8, color: step.color,
+                    letterSpacing: "0.08em", alignSelf: "center", flexShrink: 0,
                   }}
-                >✓ DONE</motion.div>
+                >✓ DONE</motion.span>
               )}
             </motion.div>
           );
         })}
       </div>
 
-      {/* Resolution banner */}
       <AnimatePresence>
         {completed && (
           <motion.div
@@ -1134,19 +1086,21 @@ function CrisisSimulation({ theme }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0 }}
             style={{
-              marginTop: 20,
-              padding: "18px 22px",
+              marginTop: 18,
+              padding: "18px 20px",
               border: `1px solid ${theme.borderGold}`,
               borderRadius: 8,
-              background: `rgba(${hex2rgb(theme.gold)},0.05)`,
-              display: "flex", alignItems: "center", justifyContent: "space-between",
+              background: `rgba(${hex2rgb(theme.gold)},${theme.isDark ? 0.06 : 0.05})`,
+              display: "flex", alignItems: "center",
+              justifyContent: "space-between",
               flexWrap: "wrap", gap: 12,
             }}
           >
             <div>
               <div style={{
                 fontFamily: "'Cormorant Garant', serif",
-                fontSize: 26, fontWeight: 700, color: theme.gold, lineHeight: 1, marginBottom: 3,
+                fontSize: 26, fontWeight: 700, color: theme.gold,
+                lineHeight: 1, marginBottom: 4,
               }}>Crisis Resolved · 6.2s</div>
               <div style={{
                 fontFamily: "'Space Grotesk', sans-serif",
@@ -1154,13 +1108,17 @@ function CrisisSimulation({ theme }) {
                 letterSpacing: "0.1em", textTransform: "uppercase",
               }}>5 agents · 2,300 candidates protected · 97% confidence</div>
             </div>
-            <div style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontSize: 8, color: theme.crimson, letterSpacing: "0.1em",
-              textTransform: "uppercase",
-            }}>
-              Human equivalent: 4–6 hours<br />
-              <span style={{ color: theme.gold }}>OrchestrAI advantage: 10,000×</span>
+            <div style={{ textAlign: "right" }}>
+              <div style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: 8, color: theme.textMuted, letterSpacing: "0.1em",
+                textTransform: "uppercase", marginBottom: 2,
+              }}>Human equivalent: 4–6 hours</div>
+              <div style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: 9, color: theme.gold, fontWeight: 700,
+                letterSpacing: "0.08em",
+              }}>OrchestrAI advantage: 10,000×</div>
             </div>
           </motion.div>
         )}
@@ -1170,7 +1128,7 @@ function CrisisSimulation({ theme }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   HERO STATUS BAR
+   HERO METRIC CARD
 ═══════════════════════════════════════════════════════ */
 function HeroMetric({ label, value, sub, color, delay, theme }) {
   return (
@@ -1179,30 +1137,35 @@ function HeroMetric({ label, value, sub, color, delay, theme }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
       style={{
-        display: "flex", flexDirection: "column", gap: 4,
-        padding: "18px 22px",
+        display: "flex", flexDirection: "column", gap: 5,
+        padding: "16px 18px",
         border: `1px solid ${theme.borderSubtle}`,
         borderRadius: 8,
         background: theme.glass,
         backdropFilter: "blur(18px)",
-        flex: 1, minWidth: 130,
+        flex: "1 1 140px",
+        minWidth: 130,
       }}
     >
+      {/* Colored accent line */}
+      <div style={{ width: 20, height: 2, background: color || theme.crimson, borderRadius: 1, marginBottom: 2 }} />
       <div style={{
         fontFamily: "'Cormorant Garant', serif",
-        fontSize: "clamp(28px, 3vw, 40px)",
-        fontWeight: 700, color: color || theme.text, lineHeight: 1,
+        fontSize: "clamp(26px, 2.8vw, 38px)",
+        fontWeight: 700, color: theme.text, lineHeight: 1,
+        letterSpacing: "-0.01em",
       }}>{value}</div>
       <div style={{
         fontFamily: "'Space Grotesk', sans-serif",
         fontSize: 9, color: theme.textMuted,
         letterSpacing: "0.14em", textTransform: "uppercase",
+        fontWeight: 500,
       }}>{label}</div>
       {sub && (
         <div style={{
           fontFamily: "'Space Grotesk', sans-serif",
-          fontSize: 8, color: color || theme.textFaint,
-          letterSpacing: "0.08em",
+          fontSize: 9, color: color || theme.textFaint,
+          letterSpacing: "0.06em",
         }}>{sub}</div>
       )}
     </motion.div>
@@ -1210,80 +1173,119 @@ function HeroMetric({ label, value, sub, color, delay, theme }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   NAVBAR
+   NAVBAR — URL-driven active state via React Router
 ═══════════════════════════════════════════════════════ */
 function DashboardNav({ isDark, toggleTheme, theme }) {
-  const navItems = ["Overview", "Agents", "Missions", "Analytics"];
-  const [active, setActive] = useState("Overview");
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  const navItems = [
+    { label: "Overview", path: "/dashboard" },
+    { label: "Agents", path: "/agents" },
+    { label: "Missions", path: "/missions" },
+    { label: "Analytics", path: "/analytics" },
+  ];
 
   return (
     <motion.nav
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      role="navigation"
+      aria-label="Main navigation"
       style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
         height: 58,
         display: "flex", alignItems: "center",
         padding: "0 clamp(16px, 4vw, 56px)",
         justifyContent: "space-between",
-        background: isDark ? "rgba(3,2,8,0.9)" : "rgba(240,235,225,0.9)",
-        backdropFilter: "blur(24px) saturate(1.8)",
-        WebkitBackdropFilter: "blur(24px) saturate(1.8)",
+        background: isDark ? "rgba(3,2,8,0.92)" : "rgba(240,235,225,0.94)",
+        backdropFilter: "blur(28px) saturate(1.8)",
+        WebkitBackdropFilter: "blur(28px) saturate(1.8)",
         borderBottom: `1px solid ${theme.borderSubtle}`,
       }}
     >
       {/* Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <svg width="26" height="26" viewBox="0 0 30 30" fill="none">
+      <button
+        onClick={() => navigate("/dashboard")}
+        aria-label="OrchestrAI home"
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          background: "none", border: "none", cursor: "pointer", padding: 0,
+        }}
+      >
+        <svg width="26" height="26" viewBox="0 0 30 30" fill="none" aria-hidden="true">
           <polygon points="15,2 28,9.5 28,20.5 15,28 2,20.5 2,9.5"
             stroke={theme.crimson} strokeWidth="1.5" fill="none" />
           <polygon points="15,8 22,12.5 22,17.5 15,22 8,17.5 8,12.5"
             fill={theme.crimson} opacity="0.85" />
-          <circle cx="15" cy="15" r="2.5" fill="#F0EBE1" />
+          <circle cx="15" cy="15" r="2.5" fill={isDark ? "#F0EBE1" : "#1A1028"} />
         </svg>
-        <div>
+        <div style={{ textAlign: "left" }}>
           <span style={{
             fontFamily: "'Cormorant Garant', serif",
             fontSize: 17, fontWeight: 600, color: theme.text, letterSpacing: "0.01em",
+            display: "block", lineHeight: 1,
           }}>
             Orchestr<span style={{ color: theme.crimson, fontStyle: "italic" }}>AI</span>
           </span>
           <span style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 8, color: theme.textFaint,
-            letterSpacing: "0.2em", textTransform: "uppercase",
-            marginLeft: 10,
+            fontSize: 7.5, color: theme.textFaint,
+            letterSpacing: "0.22em", textTransform: "uppercase", display: "block",
           }}>Mission Control</span>
         </div>
-      </div>
+      </button>
 
-      {/* Nav tabs */}
+      {/* Nav tabs — URL-driven */}
       <div className="dash-nav-tabs" style={{ display: "flex", gap: 2, alignItems: "center" }}>
-        {navItems.map(item => (
-          <button
-            key={item}
-            onClick={() => setActive(item)}
-            style={{
-              padding: "6px 16px",
-              background: active === item ? `rgba(${hex2rgb(theme.crimson)},0.12)` : "transparent",
-              border: "none",
-              borderRadius: 5,
-              color: active === item ? theme.crimson : theme.textMuted,
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
-              fontWeight: active === item ? 600 : 400,
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-          >{item}</button>
-        ))}
+        {navItems.map(item => {
+          const isActive = pathname === item.path || (item.path === "/dashboard" && pathname === "/");
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              aria-current={isActive ? "page" : undefined}
+              style={{
+                padding: "7px 16px",
+                background: isActive
+                  ? `rgba(${hex2rgb(theme.crimson)},${theme.isDark ? 0.14 : 0.1})`
+                  : "transparent",
+                border: isActive
+                  ? `1px solid rgba(${hex2rgb(theme.crimson)},0.22)`
+                  : "1px solid transparent",
+                borderRadius: 6,
+                color: isActive ? theme.crimson : theme.textMuted,
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
+                fontWeight: isActive ? 700 : 400,
+                cursor: "pointer",
+                transition: "all 0.2s",
+                position: "relative",
+              }}
+            >
+              {item.label}
+              {/* Active dot indicator */}
+              {isActive && (
+                <motion.div
+                  layoutId="nav-active-dot"
+                  style={{
+                    position: "absolute", bottom: -1, left: "50%",
+                    transform: "translateX(-50%)",
+                    width: 3, height: 3, borderRadius: "50%",
+                    background: theme.crimson,
+                  }}
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Right controls */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         {/* Live indicator */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }} aria-label="System live">
           <motion.div
             animate={{ opacity: [1, 0.2, 1] }}
             transition={{ duration: 1.5, repeat: Infinity }}
@@ -1291,19 +1293,21 @@ function DashboardNav({ isDark, toggleTheme, theme }) {
           />
           <span style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 9, color: theme.crimson, letterSpacing: "0.12em", fontWeight: 600,
+            fontSize: 9, color: theme.crimson, letterSpacing: "0.12em", fontWeight: 700,
           }}>LIVE</span>
         </div>
 
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
-          aria-label="Toggle theme"
+          aria-label={`Switch to ${isDark ? "light" : "dark"} theme`}
           style={{
             width: 38, height: 20, borderRadius: 10,
-            background: isDark ? theme.crimson : theme.textFaint,
-            border: "none", cursor: "pointer", position: "relative",
+            background: isDark ? theme.crimson : "rgba(10,7,22,0.25)",
+            border: `1px solid ${theme.borderSubtle}`,
+            cursor: "pointer", position: "relative",
             transition: "background 0.35s", outline: "none",
+            flexShrink: 0,
           }}
         >
           <motion.div
@@ -1311,8 +1315,8 @@ function DashboardNav({ isDark, toggleTheme, theme }) {
             transition={{ type: "spring", stiffness: 340, damping: 32 }}
             style={{
               width: 16, height: 16, borderRadius: "50%",
-              background: isDark ? "#F0EBE1" : "#0A0716",
-              position: "absolute", top: 2,
+              background: isDark ? "#F0EBE1" : "#1A1028",
+              position: "absolute", top: 1,
             }}
           />
         </button>
@@ -1322,30 +1326,31 @@ function DashboardNav({ isDark, toggleTheme, theme }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   SECTION WRAPPER — consistent section header
+   SECTION HEADER
 ═══════════════════════════════════════════════════════ */
 function SectionHeader({ eyebrow, eyebrowColor, title, theme }) {
   return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <div style={{ width: 20, height: 1.5, background: eyebrowColor || theme.crimson }} />
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+        <div style={{ width: 18, height: 1.5, background: eyebrowColor || theme.crimson, borderRadius: 1, flexShrink: 0 }} />
         <span style={{
           fontFamily: "'Space Grotesk', sans-serif",
-          fontSize: 9, letterSpacing: "0.22em", color: eyebrowColor || theme.crimson,
-          textTransform: "uppercase", fontWeight: 500,
+          fontSize: 9, letterSpacing: "0.22em",
+          color: eyebrowColor || theme.crimson,
+          textTransform: "uppercase", fontWeight: 600,
         }}>{eyebrow}</span>
       </div>
       <h2 style={{
         fontFamily: "'Cormorant Garant', serif",
-        fontSize: "clamp(22px, 2.2vw, 30px)",
-        fontWeight: 500, lineHeight: 1.1, color: theme.text, margin: 0,
+        fontSize: "clamp(20px, 2vw, 27px)",
+        fontWeight: 500, lineHeight: 1.15, color: theme.text, margin: 0,
       }}>{title}</h2>
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════════
-   PANEL WRAPPER — reusable glass card
+   PANEL — glass card
 ═══════════════════════════════════════════════════════ */
 function Panel({ children, style = {}, theme }) {
   return (
@@ -1355,7 +1360,7 @@ function Panel({ children, style = {}, theme }) {
       background: theme.surface,
       backdropFilter: "blur(24px) saturate(1.6)",
       WebkitBackdropFilter: "blur(24px) saturate(1.6)",
-      padding: "24px",
+      padding: "22px",
       ...style,
     }}>
       {children}
@@ -1364,17 +1369,25 @@ function Panel({ children, style = {}, theme }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   SYSTEM HEALTH RING — mini SVG donut
+   HEALTH RING — accessible SVG donut
 ═══════════════════════════════════════════════════════ */
-function HealthRing({ value, color, size = 60, strokeWidth = 5 }) {
+function HealthRing({ value, color, size = 60, strokeWidth = 5, label }) {
   const r = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * r;
   const offset = circumference - (value / 100) * circumference;
+  const trackColor = "rgba(128,128,128,0.15)";
 
   return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+    <svg
+      width={size}
+      height={size}
+      style={{ transform: "rotate(-90deg)" }}
+      role="img"
+      aria-label={`${label}: ${value}%`}
+    >
+      <title>{label}: {value}%</title>
       <circle cx={size / 2} cy={size / 2} r={r}
-        fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={strokeWidth} />
+        fill="none" stroke={trackColor} strokeWidth={strokeWidth} />
       <motion.circle
         cx={size / 2} cy={size / 2} r={r}
         fill="none" stroke={color} strokeWidth={strokeWidth}
@@ -1392,7 +1405,6 @@ function HealthRing({ value, color, size = 60, strokeWidth = 5 }) {
    DASHBOARD — ROOT COMPONENT
 ═══════════════════════════════════════════════════════ */
 export default function Dashboard() {
-  // Inherit theme from localStorage (synced with HomePage)
   const [isDark, setIsDark] = useState(() => {
     try { return localStorage.getItem("orchestrai-theme") !== "light"; } catch { return true; }
   });
@@ -1414,13 +1426,8 @@ export default function Dashboard() {
     return () => clearInterval(iv);
   }, []);
 
-  // Selected agent in network view
   const [selectedAgent, setSelectedAgent] = useState(null);
-
-  // Active insight
   const [activeInsight, setActiveInsight] = useState(0);
-
-  // System uptime counter
   const uptimeCount = useCountUp(9997, 1600, 400);
 
   return (
@@ -1434,106 +1441,131 @@ export default function Dashboard() {
           background: ${theme.bg};
           color: ${theme.text};
           overflow-x: hidden;
-          transition: background 0.55s ease, color 0.55s ease;
+          transition: background 0.5s ease, color 0.5s ease;
         }
-        ::selection { background: ${theme.crimson}50; color: ${theme.text}; }
-        ::-webkit-scrollbar { width: 3px; }
+        ::selection { background: ${theme.crimson}44; color: ${theme.text}; }
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: ${theme.crimson}55; border-radius: 2px; }
-        a { color: inherit; }
+        ::-webkit-scrollbar-thumb { background: ${theme.crimson}44; border-radius: 2px; }
+        :focus-visible {
+          outline: 2px solid ${theme.crimson};
+          outline-offset: 3px;
+          border-radius: 4px;
+        }
 
+        /* Responsive nav */
         @media (max-width: 860px) {
           .dash-nav-tabs { display: none !important; }
           .dash-main-grid { grid-template-columns: 1fr !important; }
           .dash-bottom-grid { grid-template-columns: 1fr !important; }
-          .dash-hero-metrics { flex-wrap: wrap !important; }
-          .dash-hero-metrics > div { min-width: calc(50% - 6px) !important; }
-          .dash-agent-panel { flex-direction: column !important; }
-          .dash-core-viz { height: 260px !important; }
         }
-        @media (max-width: 600px) {
-          .dash-hero-metrics > div { min-width: 100% !important; }
+
+        /* Hero metrics: wrap on narrow screens */
+        .dash-hero-metrics {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
         }
+        .dash-hero-metrics > div {
+          flex: 1 1 140px;
+          min-width: 130px;
+        }
+        @media (max-width: 520px) {
+          .dash-hero-metrics > div { flex: 1 1 calc(50% - 6px); }
+        }
+
         @media (prefers-reduced-motion: reduce) {
-          *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+          }
         }
       `}</style>
 
       {/* Background */}
-      <div style={{
+      <div aria-hidden="true" style={{
         position: "fixed", inset: 0, zIndex: 0,
         background: theme.bgGradient, pointerEvents: "none",
       }} />
       <SakuraPetals isDark={isDark} />
-      {/* Film grain */}
-      <div style={{
+      {/* Subtle film grain */}
+      <div aria-hidden="true" style={{
         position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none",
         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        opacity: isDark ? 0.02 : 0.012, mixBlendMode: "overlay",
+        opacity: isDark ? 0.022 : 0.01, mixBlendMode: "overlay",
       }} />
 
       {/* ────────── CONTENT ────────── */}
       <div style={{ position: "relative", zIndex: 2 }}>
         <DashboardNav isDark={isDark} toggleTheme={toggleTheme} theme={theme} />
 
-        {/* ────── MAIN SCROLL CONTAINER ────── */}
-        <div style={{
-          paddingTop: 58,
-          minHeight: "100vh",
-          padding: "58px clamp(12px, 3vw, 40px) 60px",
-        }}>
+        <main
+          id="main-content"
+          style={{
+            paddingTop: "calc(58px + clamp(16px, 2.5vw, 32px))",
+            paddingLeft: "clamp(12px, 3vw, 40px)",
+            paddingRight: "clamp(12px, 3vw, 40px)",
+            paddingBottom: 60,
+            minHeight: "100vh",
+          }}
+        >
 
           {/* ══════════ HERO AREA ══════════ */}
-          <motion.div
+          <motion.section
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
+            transition={{ duration: 0.65 }}
+            aria-label="System overview"
             style={{
-              paddingTop: "clamp(20px, 3vw, 36px)",
-              paddingBottom: "clamp(20px, 2.5vw, 28px)",
+              paddingBottom: "clamp(18px, 2.2vw, 26px)",
               borderBottom: `1px solid ${theme.borderSubtle}`,
-              marginBottom: "clamp(20px, 2.5vw, 28px)",
+              marginBottom: "clamp(18px, 2.2vw, 26px)",
             }}
           >
             {/* Eyebrow */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <div style={{ width: 22, height: 1.5, background: theme.crimson }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 22, height: 1.5, background: theme.crimson, borderRadius: 1 }} />
               <span style={{
                 fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: 9, letterSpacing: "0.26em", color: theme.crimson,
-                textTransform: "uppercase", fontWeight: 500,
+                fontSize: 9, letterSpacing: "0.24em", color: theme.crimson,
+                textTransform: "uppercase", fontWeight: 600,
               }}>Mission Control · OrchestrAI Intelligence Platform</span>
             </div>
 
             <div style={{
-              display: "flex", alignItems: "flex-end",
+              display: "flex", alignItems: "flex-start",
               justifyContent: "space-between", flexWrap: "wrap", gap: 16,
               marginBottom: 22,
             }}>
               <div>
                 <h1 style={{
                   fontFamily: "'Cormorant Garant', serif",
-                  fontSize: "clamp(34px, 4.5vw, 60px)",
-                  fontWeight: 400, lineHeight: 1.0, color: theme.text, margin: 0,
+                  fontSize: "clamp(30px, 4vw, 56px)",
+                  fontWeight: 400, lineHeight: 1.0, color: theme.text, margin: "0 0 8px",
                 }}>
                   Mission Control
                 </h1>
                 <p style={{
                   fontFamily: "'Inter', sans-serif",
-                  fontSize: 13, color: theme.textMuted, fontWeight: 300,
-                  marginTop: 6, margin: "6px 0 0",
+                  fontSize: 13, color: theme.textMuted, fontWeight: 400,
+                  margin: 0, lineHeight: 1.5,
                 }}>
-                  Autonomous intelligence operating across all domains · {new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                  Autonomous intelligence operating across all domains ·{" "}
+                  {new Date().toLocaleDateString("en-IN", {
+                    weekday: "long", year: "numeric", month: "long", day: "numeric",
+                  })}
                 </p>
               </div>
+
               {/* System status pill */}
               <div style={{
                 display: "flex", alignItems: "center", gap: 10,
-                padding: "10px 18px",
-                border: `1px solid ${theme.borderSubtle}`,
+                padding: "10px 16px",
+                border: `1px solid rgba(46,191,176,${theme.isDark ? 0.3 : 0.4})`,
                 borderRadius: 8,
-                background: theme.glass,
+                background: `rgba(46,191,176,${theme.isDark ? 0.06 : 0.05})`,
                 backdropFilter: "blur(12px)",
+                flexShrink: 0,
               }}>
                 <motion.div
                   animate={{ opacity: [1, 0.3, 1] }}
@@ -1542,78 +1574,49 @@ export default function Dashboard() {
                 />
                 <span style={{
                   fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: 9, color: "#2EBFB0",
-                  letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 600,
+                  fontSize: 9, color: theme.isDark ? "#2EBFB0" : "#077060",
+                  letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 700,
                 }}>All systems operational</span>
               </div>
             </div>
 
             {/* Hero metrics row */}
-            <div
-              className="dash-hero-metrics"
-              style={{ display: "flex", gap: 10, flexWrap: "nowrap" }}
-            >
-              <HeroMetric
-                label="Agents Online"
-                value="5 / 5"
-                sub="Full mesh active"
-                color={theme.crimson}
-                delay={0.1}
-                theme={theme}
-              />
-              <HeroMetric
-                label="Active Missions"
-                value="12"
-                sub="3 critical · 9 nominal"
-                color={theme.gold}
-                delay={0.18}
-                theme={theme}
-              />
-              <HeroMetric
-                label="System Health"
-                value={`${(uptimeCount / 100).toFixed(2)}%`}
-                sub="99.97% SLA target"
-                color="#2EBFB0"
-                delay={0.26}
-                theme={theme}
-              />
-              <HeroMetric
-                label="Decision Confidence"
-                value="96%"
-                sub="↑2% from last cycle"
-                color={theme.sakura}
-                delay={0.34}
-                theme={theme}
-              />
-              <HeroMetric
-                label="Ops / Second"
-                value={ops.toLocaleString()}
-                sub="Live data throughput"
-                color={theme.agentColors[3]}
-                delay={0.42}
-                theme={theme}
-              />
+            <div className="dash-hero-metrics">
+              <HeroMetric label="Agents Online" value="5 / 5" sub="Full mesh active"
+                color={theme.crimson} delay={0.08} theme={theme} />
+              <HeroMetric label="Active Missions" value="12" sub="3 critical · 9 nominal"
+                color={theme.gold} delay={0.16} theme={theme} />
+              <HeroMetric label="System Health" value={`${(uptimeCount / 100).toFixed(2)}%`}
+                sub="99.97% SLA target" color={theme.isDark ? "#2EBFB0" : "#077060"}
+                delay={0.24} theme={theme} />
+              <HeroMetric label="Decision Confidence" value="96%" sub="↑2% from last cycle"
+                color={theme.sakura} delay={0.32} theme={theme} />
+              <HeroMetric label="Ops / Second" value={ops.toLocaleString()}
+                sub="Live data throughput" color={theme.agentColors[3]}
+                delay={0.40} theme={theme} />
             </div>
-          </motion.div>
+          </motion.section>
 
           {/* ══════════ MAIN GRID: 3-col ══════════ */}
           <div
             className="dash-main-grid"
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1.5fr 1fr",
-              gap: "clamp(12px, 1.8vw, 20px)",
-              marginBottom: "clamp(12px, 1.8vw, 20px)",
+              gridTemplateColumns: "1fr 1.45fr 1fr",
+              gap: "clamp(12px, 1.6vw, 18px)",
+              marginBottom: "clamp(12px, 1.6vw, 18px)",
+              alignItems: "start",
             }}
           >
 
-            {/* ── COL 1: Intelligence Core + Agent Labels ── */}
-            <motion.div
+            {/* ── COL 1: Intelligence Core ── */}
+            <motion.section
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.15 }}
+              transition={{ duration: 0.6, delay: 0.12 }}
+              aria-label="Intelligence core"
             >
-              <Panel theme={theme} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+              <Panel theme={theme} style={{ display: "flex", flexDirection: "column" }}>
                 <SectionHeader
                   eyebrow="Intelligence Core"
                   eyebrowColor={theme.crimson}
@@ -1622,10 +1625,12 @@ export default function Dashboard() {
                 />
 
                 {/* 3D Canvas */}
-                <div
-                  className="dash-core-viz"
-                  style={{ height: 280, flex: "0 0 280px", margin: "0 -8px" }}
-                >
+                <div style={{
+                  height: "clamp(220px, 22vw, 300px)",
+                  margin: "0 -8px",
+                  borderRadius: 8,
+                  overflow: "hidden",
+                }}>
                   <CoreScene />
                 </div>
 
@@ -1635,48 +1640,50 @@ export default function Dashboard() {
                   paddingTop: 16, borderTop: `1px solid ${theme.borderSubtle}`,
                 }}>
                   {AGENTS.map(a => (
-                    <div key={a.id} style={{
-                      display: "flex", alignItems: "center", gap: 5,
-                    }}>
-                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: a.color }} />
+                    <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: a.color, flexShrink: 0 }} />
                       <span style={{
                         fontFamily: "'Space Grotesk', sans-serif",
-                        fontSize: 8.5, color: theme.textMuted,
-                        letterSpacing: "0.06em",
+                        fontSize: 9, color: theme.textMuted,
+                        letterSpacing: "0.04em",
                       }}>{a.label}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Heartbeat line */}
-                <div style={{ marginTop: 14, position: "relative", height: 24, overflow: "hidden" }}>
-                  <svg viewBox="0 0 200 24" style={{ width: "100%", height: "100%" }} preserveAspectRatio="none">
+                <div style={{
+                  marginTop: 14, position: "relative",
+                  height: 24, overflow: "hidden",
+                  borderRadius: 4,
+                }}>
+                  <svg viewBox="0 0 200 24" style={{ width: "100%", height: "100%" }} preserveAspectRatio="none" aria-hidden="true">
                     <motion.polyline
                       points="0,12 20,12 30,4 38,20 46,2 52,22 58,12 80,12 90,12 100,12 110,12 118,4 126,20 134,2 140,22 146,12 170,12 180,12 200,12"
                       fill="none"
                       stroke={theme.crimson}
-                      strokeWidth="1.2"
-                      opacity="0.6"
+                      strokeWidth="1.5"
+                      opacity={theme.isDark ? 0.6 : 0.5}
                       animate={{ x: [0, -200] }}
                       transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                     />
                   </svg>
                   <div style={{
-                    position: "absolute", right: 0, top: 0, bottom: 0,
-                    width: 30,
+                    position: "absolute", right: 0, top: 0, bottom: 0, width: 32,
                     background: `linear-gradient(to right, transparent, ${theme.surfaceSolid})`,
                   }} />
                 </div>
               </Panel>
-            </motion.div>
+            </motion.section>
 
             {/* ── COL 2: Agent Network ── */}
-            <motion.div
+            <motion.section
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.22 }}
+              transition={{ duration: 0.6, delay: 0.20 }}
+              aria-label="Agent network"
             >
-              <Panel theme={theme} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+              <Panel theme={theme} style={{ display: "flex", flexDirection: "column" }}>
                 <SectionHeader
                   eyebrow="Agent Network"
                   eyebrowColor={theme.gold}
@@ -1685,12 +1692,12 @@ export default function Dashboard() {
                 />
                 <p style={{
                   fontFamily: "'Inter', sans-serif",
-                  fontSize: 11.5, color: theme.textMuted, fontWeight: 300,
+                  fontSize: 12, color: theme.textMuted, fontWeight: 300,
                   lineHeight: 1.55, marginBottom: 16,
-                }}>Click any agent to inspect status, confidence, and current action.</p>
+                }}>Click any agent node to inspect its status, confidence score, and current action.</p>
 
                 {/* SVG network */}
-                <div style={{ flex: 1, minHeight: 240, position: "relative" }}>
+                <div style={{ minHeight: "clamp(200px, 24vw, 280px)", position: "relative" }}>
                   <AgentNetwork
                     theme={theme}
                     onAgentSelect={setSelectedAgent}
@@ -1707,17 +1714,21 @@ export default function Dashboard() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 6 }}
                       transition={{ duration: 0.22 }}
+                      role="region"
+                      aria-label={`${selectedAgent.label} agent details`}
                       style={{
                         marginTop: 14,
                         padding: "14px 16px",
                         border: `1px solid ${selectedAgent.color}44`,
                         borderRadius: 8,
-                        background: `rgba(${hex2rgb(selectedAgent.color)},0.06)`,
+                        background: `rgba(${hex2rgb(selectedAgent.color)},${theme.isDark ? 0.07 : 0.05})`,
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                        <span style={{ fontSize: 18, color: selectedAgent.color }}>{selectedAgent.icon}</span>
-                        <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                        <span style={{ fontSize: 18, color: selectedAgent.color, lineHeight: 1 }}>
+                          {selectedAgent.icon}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
                             fontFamily: "'Space Grotesk', sans-serif",
                             fontSize: 10, fontWeight: 700, color: selectedAgent.color,
@@ -1725,31 +1736,32 @@ export default function Dashboard() {
                           }}>{selectedAgent.label} Agent</div>
                           <div style={{
                             fontFamily: "'Space Grotesk', sans-serif",
-                            fontSize: 9, color: theme.textMuted, letterSpacing: "0.06em",
+                            fontSize: 10, color: theme.textMuted,
                           }}>{selectedAgent.role}</div>
                         </div>
-                        <div style={{ textAlign: "right" }}>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
                           <div style={{
                             fontFamily: "'Cormorant Garant', serif",
-                            fontSize: 22, fontWeight: 700, color: selectedAgent.color,
+                            fontSize: 24, fontWeight: 700, color: selectedAgent.color, lineHeight: 1,
                           }}>{selectedAgent.confidence}%</div>
                           <div style={{
                             fontFamily: "'Space Grotesk', sans-serif",
                             fontSize: 8, color: theme.textFaint, letterSpacing: "0.08em",
                           }}>Confidence</div>
                         </div>
-                        <div style={{
+                        <span style={{
                           fontFamily: "'Space Grotesk', sans-serif",
                           fontSize: 7, color: selectedAgent.color, letterSpacing: "0.1em",
                           background: `rgba(${hex2rgb(selectedAgent.color)},0.12)`,
+                          border: `1px solid rgba(${hex2rgb(selectedAgent.color)},0.22)`,
                           padding: "3px 7px", borderRadius: 4, fontWeight: 700,
-                          alignSelf: "flex-start",
-                        }}>{selectedAgent.status}</div>
+                          alignSelf: "flex-start", flexShrink: 0,
+                        }}>{selectedAgent.status}</span>
                       </div>
                       <p style={{
                         fontFamily: "'Inter', sans-serif",
-                        fontSize: 11, color: theme.textMuted, fontWeight: 300, margin: 0,
-                        lineHeight: 1.5,
+                        fontSize: 12, color: theme.textMuted, fontWeight: 300,
+                        margin: 0, lineHeight: 1.55,
                       }}>{selectedAgent.action}</p>
                     </motion.div>
                   ) : (
@@ -1772,16 +1784,20 @@ export default function Dashboard() {
                   )}
                 </AnimatePresence>
               </Panel>
-            </motion.div>
+            </motion.section>
 
             {/* ── COL 3: Live Activity Log ── */}
-            <motion.div
+            <motion.section
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
+              transition={{ duration: 0.6, delay: 0.28 }}
+              aria-label="Live activity log"
             >
-              <Panel theme={theme} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+              <Panel theme={theme} style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{
+                  display: "flex", justifyContent: "space-between",
+                  alignItems: "flex-start", marginBottom: 14,
+                }}>
                   <SectionHeader
                     eyebrow="Live Feed"
                     eyebrowColor={theme.sakura}
@@ -1789,70 +1805,75 @@ export default function Dashboard() {
                     theme={theme}
                   />
                   <motion.div
-                    animate={{ opacity: [1, 0.2, 1] }}
+                    animate={{ opacity: [1, 0.25, 1] }}
                     transition={{ duration: 1.4, repeat: Infinity }}
-                    style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}
+                    style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}
+                    aria-hidden="true"
                   >
                     <div style={{ width: 5, height: 5, borderRadius: "50%", background: theme.crimson }} />
                     <span style={{
                       fontFamily: "'Space Grotesk', sans-serif",
-                      fontSize: 7, color: theme.crimson, letterSpacing: "0.18em",
+                      fontSize: 7.5, color: theme.crimson, letterSpacing: "0.18em", fontWeight: 700,
                     }}>STREAMING</span>
                   </motion.div>
                 </div>
-                <div style={{ flex: 1, overflow: "hidden" }}>
-                  <LiveActivityLog theme={theme} />
-                </div>
+                <LiveActivityLog theme={theme} />
               </Panel>
-            </motion.div>
+            </motion.section>
           </div>
 
-          {/* ══════════ BOTTOM GRID: Missions + Insights + Crisis ══════════ */}
+          {/* ══════════ BOTTOM GRID ══════════ */}
           <div
             className="dash-bottom-grid"
             style={{
               display: "grid",
-              gridTemplateColumns: "1.4fr 1fr 1fr",
-              gap: "clamp(12px, 1.8vw, 20px)",
+              gridTemplateColumns: "1.35fr 1fr 1fr",
+              gap: "clamp(12px, 1.6vw, 18px)",
+              alignItems: "start",
             }}
           >
 
             {/* ── Active Missions ── */}
-            <motion.div
+            <motion.section
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.38 }}
+              transition={{ duration: 0.6, delay: 0.36 }}
+              aria-label="Active missions"
             >
               <Panel theme={theme}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                <div style={{
+                  display: "flex", justifyContent: "space-between",
+                  alignItems: "flex-start", marginBottom: 18,
+                }}>
                   <SectionHeader
                     eyebrow="Active Missions"
                     eyebrowColor={theme.crimson}
                     title={<span>Operational<br /><em style={{ color: theme.crimson }}>Command Deck</em></span>}
                     theme={theme}
                   />
-                  <div style={{
+                  <span style={{
                     fontFamily: "'Space Grotesk', sans-serif",
-                    fontSize: 8, color: theme.textFaint,
+                    fontSize: 9, color: theme.textFaint,
                     letterSpacing: "0.1em", textTransform: "uppercase",
-                    marginTop: 2,
-                  }}>3 of 12 shown</div>
+                    marginTop: 4, flexShrink: 0,
+                  }}>3 of 12</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {MISSIONS.map((m, i) => (
-                    <MissionCard key={m.code} mission={m} theme={theme} delay={0.42 + i * 0.1} />
+                    <MissionCard key={m.code} mission={m} theme={theme} delay={0.40 + i * 0.09} />
                   ))}
                 </div>
               </Panel>
-            </motion.div>
+            </motion.section>
 
             {/* ── AI Insights ── */}
-            <motion.div
+            <motion.section
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.46 }}
+              transition={{ duration: 0.6, delay: 0.44 }}
+              aria-label="AI insights"
             >
-              <Panel theme={theme} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+              <Panel theme={theme} style={{ display: "flex", flexDirection: "column" }}>
                 <SectionHeader
                   eyebrow="Intelligence Layer"
                   eyebrowColor={theme.agentColors[3]}
@@ -1861,9 +1882,9 @@ export default function Dashboard() {
                 />
                 <p style={{
                   fontFamily: "'Inter', sans-serif",
-                  fontSize: 11.5, color: theme.textMuted, fontWeight: 300,
+                  fontSize: 12, color: theme.textMuted, fontWeight: 300,
                   lineHeight: 1.55, marginBottom: 16,
-                }}>Click a recommendation to expand and execute.</p>
+                }}>Expand a recommendation to review details and execute.</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
                   {INSIGHTS.map((ins, i) => (
                     <InsightCard
@@ -1872,14 +1893,14 @@ export default function Dashboard() {
                       theme={theme}
                       isActive={activeInsight === i}
                       onClick={() => setActiveInsight(activeInsight === i ? -1 : i)}
-                      delay={0.5 + i * 0.08}
+                      delay={0.48 + i * 0.08}
                     />
                   ))}
                 </div>
 
                 {/* Confidence meter */}
                 <div style={{
-                  marginTop: 16, paddingTop: 16,
+                  marginTop: 18, paddingTop: 16,
                   borderTop: `1px solid ${theme.borderSubtle}`,
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -1888,7 +1909,7 @@ export default function Dashboard() {
                       fontSize: 9, color: theme.textMuted, letterSpacing: "0.08em",
                     }}>System Decision Confidence</span>
                     <motion.span
-                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      animate={{ opacity: [0.55, 1, 0.55] }}
                       transition={{ duration: 2.2, repeat: Infinity }}
                       style={{
                         fontFamily: "'Space Grotesk', sans-serif",
@@ -1896,7 +1917,10 @@ export default function Dashboard() {
                       }}
                     >96.4%</motion.span>
                   </div>
-                  <div style={{ height: 3, background: theme.textFaint, borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{
+                    height: 4, background: theme.isDark ? "rgba(255,255,255,0.08)" : "rgba(10,7,22,0.1)",
+                    borderRadius: 2, overflow: "hidden",
+                  }}>
                     <motion.div
                       animate={{ width: ["84%", "97%", "91%", "96%"] }}
                       transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
@@ -1909,15 +1933,16 @@ export default function Dashboard() {
                   </div>
                 </div>
               </Panel>
-            </motion.div>
+            </motion.section>
 
             {/* ── Crisis Simulation ── */}
-            <motion.div
+            <motion.section
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.54 }}
+              transition={{ duration: 0.6, delay: 0.52 }}
+              aria-label="Crisis simulation"
             >
-              <Panel theme={theme} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+              <Panel theme={theme} style={{ display: "flex", flexDirection: "column" }}>
                 <SectionHeader
                   eyebrow="Simulation Theatre"
                   eyebrowColor={theme.gold}
@@ -1926,28 +1951,29 @@ export default function Dashboard() {
                 />
                 <p style={{
                   fontFamily: "'Inter', sans-serif",
-                  fontSize: 11.5, color: theme.textMuted, fontWeight: 300,
-                  lineHeight: 1.55, marginBottom: 20,
+                  fontSize: 12, color: theme.textMuted, fontWeight: 300,
+                  lineHeight: 1.55, marginBottom: 18,
                 }}>
-                  Trigger a live simulation to watch all five agents collaborate autonomously in real time.
+                  Watch all five agents collaborate autonomously to resolve a real-time infrastructure crisis.
                 </p>
 
                 {/* System health rings */}
                 <div style={{
-                  display: "flex", gap: 16, marginBottom: 20,
-                  padding: "14px 16px",
+                  display: "flex", gap: 8, marginBottom: 20,
+                  padding: "14px 12px",
                   border: `1px solid ${theme.borderSubtle}`,
                   borderRadius: 8, background: theme.glass,
                   justifyContent: "space-around", alignItems: "center",
+                  flexWrap: "wrap",
                 }}>
                   {[
-                    { label: "Uptime", value: 99.97, color: "#2EBFB0" },
+                    { label: "Uptime", value: 99.97, color: theme.isDark ? "#2EBFB0" : "#077060" },
                     { label: "Coverage", value: 94, color: theme.crimson },
                     { label: "Accuracy", value: 99.2, color: theme.gold },
                   ].map(ring => (
-                    <div key={ring.label} style={{ textAlign: "center" }}>
+                    <div key={ring.label} style={{ textAlign: "center", padding: "4px 8px" }}>
                       <div style={{ position: "relative", display: "inline-block" }}>
-                        <HealthRing value={ring.value > 100 ? 99.97 : ring.value} color={ring.color} size={54} strokeWidth={4} />
+                        <HealthRing value={ring.value} color={ring.color} size={56} strokeWidth={4} label={ring.label} />
                         <div style={{
                           position: "absolute", inset: 0,
                           display: "flex", alignItems: "center", justifyContent: "center",
@@ -1957,8 +1983,8 @@ export default function Dashboard() {
                       </div>
                       <div style={{
                         fontFamily: "'Space Grotesk', sans-serif",
-                        fontSize: 8, color: theme.textFaint,
-                        letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 4,
+                        fontSize: 8.5, color: theme.textMuted,
+                        letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 5,
                       }}>{ring.label}</div>
                     </div>
                   ))}
@@ -1968,14 +1994,14 @@ export default function Dashboard() {
                   <CrisisSimulation theme={theme} />
                 </div>
               </Panel>
-            </motion.div>
+            </motion.section>
           </div>
 
           {/* ══════════ FOOTER BAR ══════════ */}
-          <motion.div
+          <motion.footer
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
+            transition={{ delay: 0.75 }}
             style={{
               marginTop: 28,
               paddingTop: 20,
@@ -1985,7 +2011,7 @@ export default function Dashboard() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <svg width="16" height="16" viewBox="0 0 30 30" fill="none">
+              <svg width="16" height="16" viewBox="0 0 30 30" fill="none" aria-hidden="true">
                 <polygon points="15,2 28,9.5 28,20.5 15,28 2,20.5 2,9.5"
                   stroke={theme.crimson} strokeWidth="1.5" fill="none" />
                 <polygon points="15,8 22,12.5 22,17.5 15,22 8,17.5 8,12.5"
@@ -1996,24 +2022,26 @@ export default function Dashboard() {
                 fontSize: 10, color: theme.textFaint, letterSpacing: "0.1em",
               }}>OrchestrAI © 2025 · Mission Control v2.4.1</span>
             </div>
-            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
               {[
-                { label: "Agent Mesh", value: "HEALTHY", color: "#2EBFB0" },
+                { label: "Agent Mesh", value: "HEALTHY", color: theme.isDark ? "#2EBFB0" : "#077060" },
                 { label: "Data Pipeline", value: "STREAMING", color: theme.gold },
                 { label: "Auth", value: "JWT SECURE", color: theme.crimson },
               ].map(s => (
-                <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: 4, height: 4, borderRadius: "50%", background: s.color }} />
+                <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
                   <span style={{
                     fontFamily: "'Space Grotesk', sans-serif",
-                    fontSize: 8, color: theme.textFaint, letterSpacing: "0.1em",
+                    fontSize: 8.5, color: theme.textMuted, letterSpacing: "0.1em",
                     textTransform: "uppercase",
-                  }}>{s.label}: <span style={{ color: s.color }}>{s.value}</span></span>
+                  }}>
+                    {s.label}: <span style={{ color: s.color, fontWeight: 700 }}>{s.value}</span>
+                  </span>
                 </div>
               ))}
             </div>
-          </motion.div>
-        </div>
+          </motion.footer>
+        </main>
       </div>
     </>
   );

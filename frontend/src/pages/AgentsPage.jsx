@@ -289,8 +289,8 @@ function Nav({ isDark, toggleTheme, theme }) {
   const navigate = useNavigate();
   const navItems = [
     { label: "Overview", path: "/dashboard" },
-    { label: "Missions", path: "/missions" },
     { label: "Agents",   path: "/agents" },
+    { label: "Missions", path: "/missions" },
     { label: "Analytics",path: "/analytics" },
   ];
 
