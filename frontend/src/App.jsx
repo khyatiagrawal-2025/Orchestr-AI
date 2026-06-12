@@ -7,6 +7,7 @@ import MissionDetailPage from "./pages/MissionDetailPage";
 import AgentsPage from "./pages/AgentsPage";
 import OrchestratePage from "./pages/OrchestratePage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import MissionDossier from "./pages/MissionDossier";
 
 function App() {
   return (
@@ -33,6 +34,9 @@ function App() {
 
         {/* Analytics */}
         <Route path="/analytics" element={<AnalyticsPage />} />
+
+        {/* Mission Dossier — storytelling, architecture, contributors */}
+        <Route path="/mission-dossier" element={<MissionDossier />} />
 
         {/* Fallback */}
         <Route path="*" element={<HomePage />} />
