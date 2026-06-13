@@ -1,30 +1,13 @@
 /**
- * OrchestrAI — HomePage.jsx  (Enhanced)
+ * OrchestrAI — HomePage.jsx  (Enhanced v2 — navigation wired)
  * Autonomous Multi-Agent Intelligence Platform
  *
- * Design: Japanese Futuristic Luxury × Mission Control
- * "A startup that raised $50M" — Apple polish, Arc elegance, Stripe storytelling
- *
- * Enhancements over v1:
- *  ✦ Cinematic intro gate — logo heartbeat → identity reveal → content
- *  ✦ Magnetic ambient cursor glow (desktop)
- *  ✦ React Router CTA navigation → /dashboard
- *  ✦ Multi-layer atmospheric background (grid + radials + noise)
- *  ✦ Hero breathing room + stronger typographic contrast
- *  ✦ Glassmorphism card depth with layered elevation shadows
- *  ✦ Mission status bar (ambient system pulse)
- *  ✦ Richer section transitions + scroll depth triggers
- *  ✦ Light mode contrast audit & fix
- *  ✦ Premium micro-interactions throughout
- *
- * Palette —
- *   Dark  : void #030208 · surface #0E0A1A · crimson #C4002B · gold #BF8C2C · sakura #E8A0B0 · parchment #F0EBE1
- *   Light : parchment #F0EBE1 · surface #E8E1D4 · ink #0A0716 · crimson #B80026 · gold #A87820 · sakura #C05870
- *
- * Typography —
- *   Display  : Cormorant Garant (aristocratic, cinematic weight)
- *   UI/Labels: Space Grotesk (modern precision)
- *   Body     : Inter (neutral clarity)
+ * Changes over v1:
+ *  ✦ "Technical Documentation" CTA → navigates to /mission-dossier
+ *  ✦ "Watch Demo" CTA → scrolls to #flow section (decision flow demo)
+ *  ✦ Nav links (Platform/Agents/Architecture/Deploy) → scroll to real section IDs
+ *  ✦ Navbar "Request Access" → /dashboard (already present, kept)
+ *  ✦ All other design, theme, 3D scene, animations preserved unchanged
  */
 
 import React, {
@@ -38,7 +21,6 @@ import {
 } from "framer-motion";
 import * as THREE from "three";
 
-// React Router — graceful fallback if not installed
 let useNavigate;
 try {
   ({ useNavigate } = require("react-router-dom"));
@@ -106,14 +88,17 @@ const THEMES = {
   },
 };
 
-/* ═══════════════════════════════════════════════════════
-   UTILITIES
-═══════════════════════════════════════════════════════ */
 function hex2rgb(hex) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `${r},${g},${b}`;
+}
+
+/* Smooth scroll to a section id */
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -133,10 +118,9 @@ function InjectFonts() {
 
 /* ═══════════════════════════════════════════════════════
    CINEMATIC INTRO GATE
-   Three-beat reveal: void → logo pulse → identity → content
 ═══════════════════════════════════════════════════════ */
 function IntroGate({ onComplete, theme }) {
-  const [phase, setPhase] = useState(0); // 0=void, 1=logo, 2=identity, 3=done
+  const [phase, setPhase] = useState(0);
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 300);
@@ -158,23 +142,17 @@ function IntroGate({ onComplete, theme }) {
             background: theme.bg,
             display: "flex", flexDirection: "column",
             alignItems: "center", justifyContent: "center",
-            gap: 0,
           }}
         >
-          {/* Ambient radial behind logo */}
           <motion.div
             animate={{ opacity: phase >= 1 ? 1 : 0, scale: phase >= 1 ? 1 : 0.6 }}
             transition={{ duration: 1.2, ease: "easeOut" }}
             style={{
-              position: "absolute",
-              width: 500, height: 500,
-              borderRadius: "50%",
+              position: "absolute", width: 500, height: 500, borderRadius: "50%",
               background: `radial-gradient(circle, ${theme.crimsonGlow} 0%, ${theme.goldGlow} 30%, transparent 68%)`,
               pointerEvents: "none",
             }}
           />
-
-          {/* Logo mark */}
           <motion.div
             initial={{ scale: 0.4, opacity: 0 }}
             animate={{ scale: phase >= 1 ? 1 : 0.4, opacity: phase >= 1 ? 1 : 0 }}
@@ -186,81 +164,45 @@ function IntroGate({ onComplete, theme }) {
               animate={{ rotate: phase >= 2 ? 360 : 0 }}
               transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
             >
-              <polygon
-                points="15,2 28,9.5 28,20.5 15,28 2,20.5 2,9.5"
-                stroke={theme.crimson} strokeWidth="1.5" fill="none"
-              />
-              <polygon
-                points="15,8 22,12.5 22,17.5 15,22 8,17.5 8,12.5"
-                fill={theme.crimson} opacity="0.85"
-              />
+              <polygon points="15,2 28,9.5 28,20.5 15,28 2,20.5 2,9.5" stroke={theme.crimson} strokeWidth="1.5" fill="none" />
+              <polygon points="15,8 22,12.5 22,17.5 15,22 8,17.5 8,12.5" fill={theme.crimson} opacity="0.85" />
               <circle cx="15" cy="15" r="2.5" fill={theme.text} />
             </motion.svg>
-
-            {/* Pulse ring */}
             <motion.div
               animate={{ scale: [1, 2.2], opacity: [0.5, 0] }}
               transition={{ duration: 1.4, repeat: 2, ease: "easeOut" }}
-              style={{
-                position: "absolute", inset: -8,
-                borderRadius: "50%",
-                border: `1px solid ${theme.crimson}`,
-                pointerEvents: "none",
-              }}
+              style={{ position: "absolute", inset: -8, borderRadius: "50%", border: `1px solid ${theme.crimson}`, pointerEvents: "none" }}
             />
           </motion.div>
-
-          {/* Wordmark */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: phase >= 2 ? 1 : 0, y: phase >= 2 ? 0 : 16 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             style={{ position: "relative", zIndex: 1, textAlign: "center" }}
           >
-            <div style={{
-              fontFamily: "'Cormorant Garant', serif",
-              fontSize: 36, fontWeight: 600, color: theme.text,
-              letterSpacing: "0.02em", lineHeight: 1,
-            }}>
+            <div style={{ fontFamily: "'Cormorant Garant', serif", fontSize: 36, fontWeight: 600, color: theme.text, letterSpacing: "0.02em", lineHeight: 1 }}>
               Orchestr<span style={{ color: theme.crimson, fontStyle: "italic" }}>AI</span>
             </div>
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: phase >= 2 ? 1 : 0, y: phase >= 2 ? 0 : 6 }}
               transition={{ delay: 0.25, duration: 0.55 }}
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: 9, letterSpacing: "0.32em",
-                color: theme.textMuted, textTransform: "uppercase",
-                marginTop: 10,
-              }}
+              style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 9, letterSpacing: "0.32em", color: theme.textMuted, textTransform: "uppercase", marginTop: 10 }}
             >
               Autonomous · Multi-Agent · Intelligence
             </motion.div>
           </motion.div>
-
-          {/* Loading bar */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: phase >= 2 ? 1 : 0 }}
             transition={{ delay: 0.3 }}
-            style={{
-              position: "absolute", bottom: 48,
-              width: 160, height: 1,
-              background: theme.textFaint,
-              borderRadius: 1, overflow: "hidden",
-            }}
+            style={{ position: "absolute", bottom: 48, width: 160, height: 1, background: theme.textFaint, borderRadius: 1, overflow: "hidden" }}
           >
             <motion.div
               initial={{ scaleX: 0 }}
               animate={{ scaleX: phase >= 2 ? 1 : 0 }}
               transition={{ duration: 1.0, ease: "easeInOut" }}
-              style={{
-                height: "100%",
-                background: `linear-gradient(to right, ${theme.crimson}, ${theme.gold})`,
-                transformOrigin: "left",
-                borderRadius: 1,
-              }}
+              style={{ height: "100%", background: `linear-gradient(to right, ${theme.crimson}, ${theme.gold})`, transformOrigin: "left", borderRadius: 1 }}
             />
           </motion.div>
         </motion.div>
@@ -270,7 +212,7 @@ function IntroGate({ onComplete, theme }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   AMBIENT CURSOR GLOW (desktop only)
+   AMBIENT CURSOR GLOW
 ═══════════════════════════════════════════════════════ */
 function CursorGlow({ theme }) {
   const x = useMotionValue(-200);
@@ -280,7 +222,7 @@ function CursorGlow({ theme }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (window.matchMedia("(pointer: coarse)").matches) return; // skip touch
+    if (window.matchMedia("(pointer: coarse)").matches) return;
     const move = (e) => { x.set(e.clientX); y.set(e.clientY); setVisible(true); };
     const leave = () => setVisible(false);
     window.addEventListener("mousemove", move);
@@ -291,19 +233,12 @@ function CursorGlow({ theme }) {
   return (
     <motion.div
       style={{
-        position: "fixed",
-        left: springX,
-        top: springY,
-        translateX: "-50%",
-        translateY: "-50%",
-        width: 520,
-        height: 520,
-        borderRadius: "50%",
+        position: "fixed", left: springX, top: springY,
+        translateX: "-50%", translateY: "-50%",
+        width: 520, height: 520, borderRadius: "50%",
         background: `radial-gradient(circle, ${theme.crimsonGlowSoft} 0%, transparent 60%)`,
-        pointerEvents: "none",
-        zIndex: 1,
-        opacity: visible ? 1 : 0,
-        transition: "opacity 0.4s ease",
+        pointerEvents: "none", zIndex: 1,
+        opacity: visible ? 1 : 0, transition: "opacity 0.4s ease",
         mixBlendMode: theme.isDark ? "screen" : "multiply",
       }}
     />
@@ -311,59 +246,37 @@ function CursorGlow({ theme }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   ATMOSPHERIC BACKGROUND GRID
+   ATMOSPHERIC BACKGROUND
 ═══════════════════════════════════════════════════════ */
 function AtmosphericBg({ theme }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
-      {/* Base gradient */}
       <div style={{ position: "absolute", inset: 0, background: theme.bgGradient }} />
-
-      {/* Perspective grid */}
       <div style={{
         position: "absolute", inset: 0,
-        backgroundImage: `
-          linear-gradient(${theme.gridColor} 1px, transparent 1px),
-          linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)
-        `,
+        backgroundImage: `linear-gradient(${theme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)`,
         backgroundSize: "60px 60px",
         maskImage: "radial-gradient(ellipse 80% 60% at 50% 100%, black 0%, transparent 70%)",
         WebkitMaskImage: "radial-gradient(ellipse 80% 60% at 50% 100%, black 0%, transparent 70%)",
       }} />
-
-      {/* Hero crimson bloom — top right */}
       <div style={{
-        position: "absolute",
-        right: "-10%", top: "5%",
-        width: "60vw", height: "60vw",
-        maxWidth: 800, maxHeight: 800,
+        position: "absolute", right: "-10%", top: "5%",
+        width: "60vw", height: "60vw", maxWidth: 800, maxHeight: 800,
         background: `radial-gradient(ellipse at 60% 40%, ${theme.crimsonGlow} 0%, transparent 60%)`,
         filter: "blur(40px)",
       }} />
-
-      {/* Gold bloom — mid left */}
       <div style={{
-        position: "absolute",
-        left: "-5%", top: "55%",
-        width: "40vw", height: "40vw",
-        maxWidth: 600, maxHeight: 600,
+        position: "absolute", left: "-5%", top: "55%",
+        width: "40vw", height: "40vw", maxWidth: 600, maxHeight: 600,
         background: `radial-gradient(ellipse at 40% 50%, ${theme.goldGlow} 0%, transparent 65%)`,
-        filter: "blur(48px)",
-        opacity: 0.6,
+        filter: "blur(48px)", opacity: 0.6,
       }} />
-
-      {/* Sakura bloom — bottom center */}
       <div style={{
-        position: "absolute",
-        left: "30%", bottom: "10%",
-        width: "35vw", height: "25vw",
-        maxWidth: 500,
+        position: "absolute", left: "30%", bottom: "10%",
+        width: "35vw", height: "25vw", maxWidth: 500,
         background: `radial-gradient(ellipse at 50% 50%, ${theme.sakuraGlow} 0%, transparent 70%)`,
-        filter: "blur(60px)",
-        opacity: 0.5,
+        filter: "blur(60px)", opacity: 0.5,
       }} />
-
-      {/* Film grain */}
       <div style={{
         position: "absolute", inset: 0,
         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
@@ -375,7 +288,7 @@ function AtmosphericBg({ theme }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   MISSION STATUS BAR — ambient system pulse at top
+   MISSION STATUS BAR
 ═══════════════════════════════════════════════════════ */
 function MissionStatusBar({ theme, visible }) {
   const [time, setTime] = useState(new Date());
@@ -399,13 +312,10 @@ function MissionStatusBar({ theme, visible }) {
       style={{
         position: "fixed", top: 0, left: 0, right: 0,
         height: 28, zIndex: 300,
-        background: theme.isDark
-          ? "rgba(3,2,8,0.95)"
-          : "rgba(10,7,22,0.92)",
+        background: theme.isDark ? "rgba(3,2,8,0.95)" : "rgba(10,7,22,0.92)",
         borderBottom: `1px solid ${theme.borderSubtle}`,
         display: "flex", alignItems: "center",
-        padding: "0 clamp(20px, 5vw, 80px)",
-        gap: 28,
+        padding: "0 clamp(20px, 5vw, 80px)", gap: 28,
         backdropFilter: "blur(12px)",
       }}
     >
@@ -416,25 +326,12 @@ function MissionStatusBar({ theme, visible }) {
             transition={{ duration: 1.6 + i * 0.2, repeat: Infinity }}
             style={{ width: 4, height: 4, borderRadius: "50%", background: s.color }}
           />
-          <span style={{
-            fontFamily: "'Space Grotesk', monospace",
-            fontSize: 8, color: "rgba(240,235,225,0.35)",
-            letterSpacing: "0.12em", textTransform: "uppercase",
-          }}>{s.label}</span>
-          <span style={{
-            fontFamily: "'Space Grotesk', monospace",
-            fontSize: 8, color: s.color,
-            letterSpacing: "0.1em", fontWeight: 600,
-          }}>{s.value}</span>
+          <span style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 8, color: "rgba(240,235,225,0.35)", letterSpacing: "0.12em", textTransform: "uppercase" }}>{s.label}</span>
+          <span style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 8, color: s.color, letterSpacing: "0.1em", fontWeight: 600 }}>{s.value}</span>
         </div>
       ))}
-
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{
-          fontFamily: "'Space Grotesk', monospace",
-          fontSize: 8, color: "rgba(240,235,225,0.25)",
-          letterSpacing: "0.12em",
-        }}>
+      <div style={{ marginLeft: "auto" }}>
+        <span style={{ fontFamily: "'Space Grotesk', monospace", fontSize: 8, color: "rgba(240,235,225,0.25)", letterSpacing: "0.12em" }}>
           {time.toISOString().replace("T", " ").slice(0, 19)} UTC
         </span>
       </div>
@@ -468,7 +365,6 @@ function SakuraPetals({ isDark }) {
         opacity: Math.random() * 0.35 + 0.08,
       }));
     };
-
     init();
 
     const draw = () => {
@@ -500,15 +396,12 @@ function SakuraPetals({ isDark }) {
   }, [isDark]);
 
   return (
-    <canvas ref={ref} style={{
-      position: "fixed", inset: 0, width: "100%", height: "100%",
-      pointerEvents: "none", zIndex: 0,
-    }} />
+    <canvas ref={ref} style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }} />
   );
 }
 
 /* ═══════════════════════════════════════════════════════
-   3D SCENE — preserved from v1, tightened
+   3D SCENE — unchanged from v1
 ═══════════════════════════════════════════════════════ */
 function AgentNode({ position, color, name, radius, speed, phase, onHover }) {
   const meshRef = useRef();
@@ -523,9 +416,7 @@ function AgentNode({ position, color, name, radius, speed, phase, onHover }) {
       meshRef.current.scale.setScalar(hovered ? 1.3 : pulse);
     }
     if (glowRef.current) {
-      glowRef.current.material.opacity = hovered
-        ? 0.35
-        : 0.1 + Math.sin(t * speed + phase) * 0.06;
+      glowRef.current.material.opacity = hovered ? 0.35 : 0.1 + Math.sin(t * speed + phase) * 0.06;
     }
   });
 
@@ -541,11 +432,7 @@ function AgentNode({ position, color, name, radius, speed, phase, onHover }) {
         onPointerOut={() => { setHovered(false); onHover(null); }}
       >
         <sphereGeometry args={[radius, 24, 24]} />
-        <meshStandardMaterial
-          color={color} emissive={color}
-          emissiveIntensity={hovered ? 1.4 : 0.6}
-          metalness={0.7} roughness={0.15}
-        />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={hovered ? 1.4 : 0.6} metalness={0.7} roughness={0.15} />
       </mesh>
       <mesh>
         <sphereGeometry args={[radius * 0.45, 12, 12]} />
@@ -758,7 +645,6 @@ const AGENT_INFO = {
 function AgentTooltip({ name, theme }) {
   const info = AGENT_INFO[name];
   if (!info) return null;
-
   return (
     <AnimatePresence>
       <motion.div
@@ -768,18 +654,12 @@ function AgentTooltip({ name, theme }) {
         exit={{ opacity: 0, y: 8, scale: 0.97 }}
         transition={{ duration: 0.22, ease: "easeOut" }}
         style={{
-          position: "absolute",
-          bottom: 28, left: "50%",
-          transform: "translateX(-50%)",
+          position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)",
           width: "min(360px, 90vw)",
           background: theme.surface,
-          backdropFilter: "blur(32px) saturate(1.8)",
-          WebkitBackdropFilter: "blur(32px) saturate(1.8)",
-          border: `1px solid ${info.color}55`,
-          borderRadius: 10,
-          padding: "20px 22px",
-          zIndex: 40,
-          pointerEvents: "none",
+          backdropFilter: "blur(32px) saturate(1.8)", WebkitBackdropFilter: "blur(32px) saturate(1.8)",
+          border: `1px solid ${info.color}55`, borderRadius: 10, padding: "20px 22px",
+          zIndex: 40, pointerEvents: "none",
           boxShadow: `0 24px 60px rgba(0,0,0,0.35), 0 0 0 1px ${info.color}22`,
         }}
       >
@@ -813,10 +693,10 @@ function TelemetryStrip({ theme }) {
   }, []);
 
   const metrics = [
-    { label: "Ops / second",   value: ops.toLocaleString(), color: theme.crimson },
-    { label: "Active agents",  value: "5 / 5",              color: theme.gold },
-    { label: "Agent latency",  value: `${latency}ms`,       color: theme.sakura },
-    { label: "System uptime",  value: "99.97%",             color: theme.agentColors[3] },
+    { label: "Ops / second",  value: ops.toLocaleString(), color: theme.crimson },
+    { label: "Active agents", value: "5 / 5",              color: theme.gold },
+    { label: "Agent latency", value: `${latency}ms`,       color: theme.sakura },
+    { label: "System uptime", value: "99.97%",             color: theme.agentColors[3] },
   ];
 
   return (
@@ -825,12 +705,8 @@ function TelemetryStrip({ theme }) {
       animate={{ opacity: 1 }}
       transition={{ delay: 1.2 }}
       style={{
-        display: "flex",
-        gap: "clamp(20px, 4vw, 44px)",
-        flexWrap: "wrap",
-        paddingTop: 24,
-        borderTop: `1px solid ${theme.textFaint}`,
-        marginTop: 44,
+        display: "flex", gap: "clamp(20px, 4vw, 44px)", flexWrap: "wrap",
+        paddingTop: 24, borderTop: `1px solid ${theme.textFaint}`, marginTop: 44,
       }}
     >
       {metrics.map((m, i) => (
@@ -849,16 +725,11 @@ function TelemetryStrip({ theme }) {
             />
             <span style={{
               fontFamily: "'Space Grotesk', monospace",
-              fontSize: "clamp(18px, 2vw, 26px)",
-              fontWeight: 600, color: theme.text, lineHeight: 1,
+              fontSize: "clamp(18px, 2vw, 26px)", fontWeight: 600, color: theme.text, lineHeight: 1,
               fontVariantNumeric: "tabular-nums",
             }}>{m.value}</span>
           </div>
-          <span style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 9, color: theme.textMuted,
-            letterSpacing: "0.14em", textTransform: "uppercase",
-          }}>{m.label}</span>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 9, color: theme.textMuted, letterSpacing: "0.14em", textTransform: "uppercase" }}>{m.label}</span>
         </motion.div>
       ))}
     </motion.div>
@@ -866,17 +737,26 @@ function TelemetryStrip({ theme }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   NAVBAR — offset for status bar
+   NAVBAR — nav links wired to section scroll + mission dossier
 ═══════════════════════════════════════════════════════ */
 function Navbar({ isDark, toggleTheme, theme, showStatusBar, navigate }) {
   const [scrolled, setScrolled] = useState(false);
+  const [activeLink, setActiveLink] = useState(null);
+
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", h, { passive: true });
     return () => window.removeEventListener("scroll", h);
   }, []);
 
-  const navItems = ["Platform", "Agents", "Architecture", "Deploy"];
+  // Map nav label → section id (matches section id attributes below)
+  const navItems = [
+    { label: "Platform",     id: "platform" },
+    { label: "Agents",       id: "hero" },       // 3D lattice is in hero
+    { label: "Architecture", id: "architecture" },
+    { label: "Deploy",       id: "deploy" },
+  ];
+
   const topOffset = showStatusBar ? 28 : 0;
 
   return (
@@ -886,10 +766,8 @@ function Navbar({ isDark, toggleTheme, theme, showStatusBar, navigate }) {
       transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
       style={{
         position: "fixed", top: topOffset, left: 0, right: 0, zIndex: 200,
-        height: 62,
-        display: "flex", alignItems: "center",
-        padding: "0 clamp(20px, 5vw, 80px)",
-        justifyContent: "space-between",
+        height: 62, display: "flex", alignItems: "center",
+        padding: "0 clamp(20px, 5vw, 80px)", justifyContent: "space-between",
         background: scrolled
           ? (isDark ? "rgba(3,2,8,0.9)" : "rgba(240,235,225,0.9)")
           : "transparent",
@@ -900,27 +778,37 @@ function Navbar({ isDark, toggleTheme, theme, showStatusBar, navigate }) {
       }}
     >
       {/* Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ position: "relative", width: 30, height: 30 }}>
-          <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-            <polygon points="15,2 28,9.5 28,20.5 15,28 2,20.5 2,9.5" stroke={theme.crimson} strokeWidth="1.5" fill="none" />
-            <polygon points="15,8 22,12.5 22,17.5 15,22 8,17.5 8,12.5" fill={theme.crimson} opacity="0.85" />
-            <circle cx="15" cy="15" r="2.5" fill="#F0EBE1" />
-          </svg>
-        </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => scrollToSection("hero")}>
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <polygon points="15,2 28,9.5 28,20.5 15,28 2,20.5 2,9.5" stroke={theme.crimson} strokeWidth="1.5" fill="none" />
+          <polygon points="15,8 22,12.5 22,17.5 15,22 8,17.5 8,12.5" fill={theme.crimson} opacity="0.85" />
+          <circle cx="15" cy="15" r="2.5" fill="#F0EBE1" />
+        </svg>
         <span style={{ fontFamily: "'Cormorant Garant', serif", fontSize: 19, fontWeight: 600, color: theme.text, letterSpacing: "0.01em" }}>
           Orchestr<span style={{ color: theme.crimson, fontStyle: "italic" }}>AI</span>
         </span>
       </div>
 
-      {/* Links */}
+      {/* Links — scroll to sections */}
       <div className="orch-nav-links" style={{ display: "flex", gap: 40, alignItems: "center" }}>
-        {navItems.map(link => (
-          <a key={link} href={`#${link.toLowerCase()}`}
-            style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.08em", color: theme.textMuted, textDecoration: "none", textTransform: "uppercase", fontWeight: 500, transition: "color 0.2s" }}
-            onMouseEnter={e => e.target.style.color = theme.text}
-            onMouseLeave={e => e.target.style.color = theme.textMuted}
-          >{link}</a>
+        {navItems.map(item => (
+          <button
+            key={item.label}
+            onClick={() => { scrollToSection(item.id); setActiveLink(item.label); }}
+            style={{
+              fontFamily: "'Space Grotesk', sans-serif", fontSize: 12,
+              letterSpacing: "0.08em", color: activeLink === item.label ? theme.text : theme.textMuted,
+              textTransform: "uppercase", fontWeight: 500,
+              background: "transparent", border: "none", cursor: "pointer",
+              padding: 0, transition: "color 0.2s",
+              borderBottom: activeLink === item.label ? `1px solid ${theme.crimson}` : "1px solid transparent",
+              paddingBottom: 2,
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = theme.text}
+            onMouseLeave={e => e.currentTarget.style.color = activeLink === item.label ? theme.text : theme.textMuted}
+          >
+            {item.label}
+          </button>
         ))}
       </div>
 
@@ -951,7 +839,7 @@ function Navbar({ isDark, toggleTheme, theme, showStatusBar, navigate }) {
             fontWeight: 600, cursor: "pointer",
           }}
         >
-          Request Access
+          Enter Platform
         </motion.button>
       </div>
     </motion.nav>
@@ -959,7 +847,7 @@ function Navbar({ isDark, toggleTheme, theme, showStatusBar, navigate }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   HERO SECTION — elevated with cinematic depth
+   HERO SECTION
 ═══════════════════════════════════════════════════════ */
 function HeroSection({ theme, isDark, navigate, topOffset }) {
   const [hoveredAgent, setHoveredAgent] = useState(null);
@@ -984,20 +872,15 @@ function HeroSection({ theme, isDark, navigate, topOffset }) {
       onMouseMove={handleMove}
       style={{
         minHeight: "100vh",
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        alignItems: "center",
+        display: "grid", gridTemplateColumns: "1fr 1fr", alignItems: "center",
         padding: `${navHeight + 20}px clamp(24px, 5.5vw, 88px) clamp(60px, 8vw, 100px)`,
         gap: "clamp(32px, 4vw, 80px)",
-        position: "relative",
-        overflow: "hidden",
+        position: "relative", overflow: "hidden",
       }}
       className="orch-hero-grid"
     >
-      {/* ── LEFT: Headline block ── */}
+      {/* LEFT: Headline block */}
       <div style={{ position: "relative", zIndex: 10 }}>
-
-        {/* Eyebrow badge */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -1005,63 +888,39 @@ function HeroSection({ theme, isDark, navigate, topOffset }) {
           style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 40 }}
         >
           <div style={{ width: 22, height: 1.5, background: theme.crimson }} />
-          <span style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: 10, letterSpacing: "0.28em", color: theme.crimson,
-            textTransform: "uppercase", fontWeight: 500,
-          }}>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: "0.28em", color: theme.crimson, textTransform: "uppercase", fontWeight: 500 }}>
             Autonomous · Multi-Agent · Intelligence
           </span>
         </motion.div>
 
-        {/* Headline — staggered lines with weight contrast */}
         <div style={{ marginBottom: 32 }}>
-          {/* Line 1 — light weight, wide tracking */}
           <div style={{ overflow: "hidden", marginBottom: 4 }}>
             <motion.h1
               initial={{ y: 90, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.95, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              style={{
-                fontFamily: "'Cormorant Garant', serif",
-                fontSize: "clamp(50px, 6.2vw, 90px)",
-                fontWeight: 300, fontStyle: "italic",
-                lineHeight: 1.0, color: theme.textMuted,
-                letterSpacing: "0.02em",
-                margin: 0,
-              }}
+              style={{ fontFamily: "'Cormorant Garant', serif", fontSize: "clamp(50px, 6.2vw, 90px)", fontWeight: 300, fontStyle: "italic", lineHeight: 1.0, color: theme.textMuted, letterSpacing: "0.02em", margin: 0 }}
             >
               Five agents.
             </motion.h1>
           </div>
-
-          {/* Line 2 — medium weight */}
           <div style={{ overflow: "hidden", marginBottom: 4 }}>
             <motion.h1
               initial={{ y: 90, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.95, delay: 0.34, ease: [0.22, 1, 0.36, 1] }}
-              style={{
-                fontFamily: "'Cormorant Garant', serif",
-                fontSize: "clamp(50px, 6.2vw, 90px)",
-                fontWeight: 500,
-                lineHeight: 1.0, color: theme.text,
-                margin: 0,
-              }}
+              style={{ fontFamily: "'Cormorant Garant', serif", fontSize: "clamp(50px, 6.2vw, 90px)", fontWeight: 500, lineHeight: 1.0, color: theme.text, margin: 0 }}
             >
               One command.
             </motion.h1>
           </div>
-
-          {/* Line 3 — heavy italic gradient — the statement */}
           <div style={{ overflow: "hidden" }}>
             <motion.h1
               initial={{ y: 90, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.95, delay: 0.46, ease: [0.22, 1, 0.36, 1] }}
               style={{
-                fontFamily: "'Cormorant Garant', serif",
-                fontSize: "clamp(50px, 6.2vw, 90px)",
+                fontFamily: "'Cormorant Garant', serif", fontSize: "clamp(50px, 6.2vw, 90px)",
                 fontWeight: 700, fontStyle: "italic", lineHeight: 1.0,
                 background: `linear-gradient(128deg, ${theme.crimson} 0%, ${theme.gold} 55%, ${theme.sakura} 100%)`,
                 WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
@@ -1073,17 +932,11 @@ function HeroSection({ theme, isDark, navigate, topOffset }) {
           </div>
         </div>
 
-        {/* Body paragraph */}
         <motion.p
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.64, duration: 0.7 }}
-          style={{
-            fontFamily: "'Inter', sans-serif",
-            fontSize: "clamp(14px, 1.5vw, 16px)",
-            fontWeight: 300, lineHeight: 1.82,
-            color: theme.textMuted, margin: "0 0 44px 0", maxWidth: 440,
-          }}
+          style={{ fontFamily: "'Inter', sans-serif", fontSize: "clamp(14px, 1.5vw, 16px)", fontWeight: 300, lineHeight: 1.82, color: theme.textMuted, margin: "0 0 44px 0", maxWidth: 440 }}
         >
           OrchestrAI deploys a coordinated mesh of specialized AI agents across
           critical operations — perceiving, deciding, and acting in real time
@@ -1099,44 +952,33 @@ function HeroSection({ theme, isDark, navigate, topOffset }) {
         >
           {/* Primary CTA → /dashboard */}
           <motion.button
-            whileHover={{
-              scale: 1.04,
-              boxShadow: `0 12px 52px ${theme.crimsonGlow}, 0 2px 0 0 ${theme.crimsonLight}`,
-            }}
+            whileHover={{ scale: 1.04, boxShadow: `0 12px 52px ${theme.crimsonGlow}, 0 2px 0 0 ${theme.crimsonLight}` }}
             whileTap={{ scale: 0.97 }}
             onClick={() => navigate("/dashboard")}
             style={{
-              padding: "15px 40px",
-              background: theme.crimson, border: "none", borderRadius: 7,
-              color: "#F0EBE1",
-              fontFamily: "'Cormorant Garant', serif",
-              fontSize: 18, fontWeight: 600, fontStyle: "italic",
-              letterSpacing: "0.02em", cursor: "pointer",
-              transition: "box-shadow 0.3s",
+              padding: "15px 40px", background: theme.crimson, border: "none", borderRadius: 7,
+              color: "#F0EBE1", fontFamily: "'Cormorant Garant', serif",
+              fontSize: 18, fontWeight: 600, fontStyle: "italic", letterSpacing: "0.02em",
+              cursor: "pointer", transition: "box-shadow 0.3s",
               position: "relative", overflow: "hidden",
             }}
           >
-            {/* Shimmer */}
             <motion.div
               animate={{ x: ["-100%", "200%"] }}
               transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
-              style={{
-                position: "absolute", inset: 0,
-                background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)",
-                pointerEvents: "none",
-              }}
+              style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)", pointerEvents: "none" }}
             />
             Enter Mission Control
           </motion.button>
 
+          {/* Secondary CTA → scroll to decision flow demo */}
           <motion.button
             whileHover={{ scale: 1.02, borderColor: theme.gold, color: theme.gold }}
             whileTap={{ scale: 0.97 }}
+            onClick={() => scrollToSection("flow")}
             style={{
-              padding: "15px 28px",
-              background: "transparent",
-              border: `1px solid ${theme.borderSubtle}`,
-              borderRadius: 7, color: theme.textMuted,
+              padding: "15px 28px", background: "transparent",
+              border: `1px solid ${theme.borderSubtle}`, borderRadius: 7, color: theme.textMuted,
               fontFamily: "'Space Grotesk', sans-serif",
               fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase",
               fontWeight: 500, cursor: "pointer",
@@ -1144,62 +986,46 @@ function HeroSection({ theme, isDark, navigate, topOffset }) {
               transition: "all 0.22s ease",
             }}
           >
-            <span style={{ fontSize: 10 }}>▶</span> Watch Demo
+            <span style={{ fontSize: 10 }}>▶</span> See It In Action
           </motion.button>
         </motion.div>
 
         <TelemetryStrip theme={theme} />
       </div>
 
-      {/* ── RIGHT: 3D canvas ── */}
+      {/* RIGHT: 3D canvas */}
       <div style={{ position: "relative", zIndex: 5, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <motion.div
           style={{
-            width: "100%",
-            aspectRatio: "1/1",
-            maxWidth: 600,
-            rotateX, rotateY,
-            transformStyle: "preserve-3d",
-            position: "relative",
+            width: "100%", aspectRatio: "1/1", maxWidth: 600,
+            rotateX, rotateY, transformStyle: "preserve-3d", position: "relative",
           }}
           className="orch-canvas-3d"
         >
-          {/* Glass frame behind canvas */}
           <div style={{
-            position: "absolute", inset: -16,
-            borderRadius: "50%",
+            position: "absolute", inset: -16, borderRadius: "50%",
             background: `radial-gradient(circle, ${theme.crimsonGlowSoft} 0%, transparent 70%)`,
-            filter: "blur(24px)",
-            pointerEvents: "none",
+            filter: "blur(24px)", pointerEvents: "none",
           }} />
-
           <Scene3D onAgentHover={setHoveredAgent} />
-
           <AnimatePresence>
             {!hoveredAgent && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ delay: 2.5 }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ delay: 2.5 }}
                 style={{
-                  position: "absolute", bottom: 50, left: "50%",
-                  transform: "translateX(-50%)",
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: 10, color: theme.textFaint,
-                  letterSpacing: "0.2em", textTransform: "uppercase",
-                  textAlign: "center", whiteSpace: "nowrap", pointerEvents: "none",
+                  position: "absolute", bottom: 50, left: "50%", transform: "translateX(-50%)",
+                  fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: theme.textFaint,
+                  letterSpacing: "0.2em", textTransform: "uppercase", textAlign: "center",
+                  whiteSpace: "nowrap", pointerEvents: "none",
                 }}
               >
                 Hover agents to explore
               </motion.div>
             )}
           </AnimatePresence>
-
           {hoveredAgent && <AgentTooltip name={hoveredAgent} theme={theme} />}
         </motion.div>
 
-        {/* Agent legend */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -1217,15 +1043,8 @@ function HeroSection({ theme, isDark, navigate, topOffset }) {
 
       {/* Scroll cue */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 3.0 }}
-        style={{
-          position: "absolute", bottom: 28,
-          left: "50%", transform: "translateX(-50%)",
-          display: "flex", flexDirection: "column", alignItems: "center", gap: 7,
-          zIndex: 10,
-        }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3.0 }}
+        style={{ position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, zIndex: 10 }}
       >
         <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 8, color: theme.textFaint, letterSpacing: "0.28em" }}>SCROLL</span>
         <motion.div
@@ -1239,16 +1058,12 @@ function HeroSection({ theme, isDark, navigate, topOffset }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   SECTION DIVIDER — visual breath between sections
+   SECTION DIVIDER
 ═══════════════════════════════════════════════════════ */
 function SectionDivider({ theme, accent = "crimson" }) {
   const color = theme[accent] || theme.crimson;
   return (
-    <div style={{
-      display: "flex", alignItems: "center",
-      padding: "0 clamp(24px, 5.5vw, 88px)",
-      gap: 16, opacity: 0.4,
-    }}>
+    <div style={{ display: "flex", alignItems: "center", padding: "0 clamp(24px, 5.5vw, 88px)", gap: 16, opacity: 0.4 }}>
       <div style={{ flex: 1, height: 1, background: theme.borderSubtle }} />
       <div style={{ width: 6, height: 6, borderRadius: "50%", border: `1px solid ${color}`, opacity: 0.6 }} />
       <div style={{ flex: 1, height: 1, background: theme.borderSubtle }} />
@@ -1260,11 +1075,11 @@ function SectionDivider({ theme, accent = "crimson" }) {
    DECISION FLOW SECTION
 ═══════════════════════════════════════════════════════ */
 const FLOW_STEPS = [
-  { agent: "Risk",          color: "#BF8C2C", icon: "⬡", event: "Disruption Detected",    detail: "3 exam centers flagged · severe weather incoming · 2.4hr window",                         time: "T+0ms" },
-  { agent: "Intelligence", color: "#7C6FE8", icon: "◬", event: "Impact Assessed",          detail: "12,400 candidates affected · 6 viable alternate centers identified",                    time: "T+240ms" },
-  { agent: "Allocation",   color: "#C4002B", icon: "◈", event: "Resources Reallocated",    detail: "Optimal center mapping computed · transport routes reserved",                           time: "T+890ms" },
-  { agent: "Operations",  color: "#E8A0B0", icon: "⟁", event: "Execution Sequenced",      detail: "48 dependent tasks queued · staff reassigned · logistics confirmed",                    time: "T+1.2s" },
-  { agent: "Communication",color:"#2EBFB0", icon: "◫", event: "All Parties Notified",      detail: "12,400 SMS dispatched · 94 coordinators briefed · media advisory issued",              time: "T+1.8s" },
+  { agent: "Risk",          color: "#BF8C2C", icon: "⬡", event: "Disruption Detected",    detail: "3 exam centers flagged · severe weather incoming · 2.4hr window",                      time: "T+0ms" },
+  { agent: "Intelligence", color: "#7C6FE8", icon: "◬", event: "Impact Assessed",          detail: "12,400 candidates affected · 6 viable alternate centers identified",                  time: "T+240ms" },
+  { agent: "Allocation",   color: "#C4002B", icon: "◈", event: "Resources Reallocated",    detail: "Optimal center mapping computed · transport routes reserved",                         time: "T+890ms" },
+  { agent: "Operations",  color: "#E8A0B0", icon: "⟁", event: "Execution Sequenced",      detail: "48 dependent tasks queued · staff reassigned · logistics confirmed",                  time: "T+1.2s" },
+  { agent: "Communication",color:"#2EBFB0", icon: "◫", event: "All Parties Notified",      detail: "12,400 SMS dispatched · 94 coordinators briefed · media advisory issued",            time: "T+1.8s" },
 ];
 
 function DecisionFlow({ theme }) {
@@ -1297,15 +1112,12 @@ function DecisionFlow({ theme }) {
 
       <div style={{ position: "relative" }}>
         <div style={{ position: "absolute", top: 28, left: 0, right: 0, height: 1, background: theme.textFaint, zIndex: 0 }} className="orch-flow-line" />
-
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16, position: "relative", zIndex: 1 }} className="orch-flow-grid">
           {FLOW_STEPS.map((step, i) => (
             <motion.div
               key={step.event}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
+              initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}
             >
               <motion.div
@@ -1320,9 +1132,7 @@ function DecisionFlow({ theme }) {
                   background: active >= i ? `rgba(${hex2rgb(step.color)},0.12)` : theme.glass,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 22, color: active >= i ? step.color : theme.textFaint,
-                  transition: "all 0.4s ease",
-                  backdropFilter: "blur(10px)",
-                  flexShrink: 0,
+                  transition: "all 0.4s ease", backdropFilter: "blur(10px)", flexShrink: 0,
                 }}
               >{step.icon}</motion.div>
 
@@ -1338,10 +1148,8 @@ function DecisionFlow({ theme }) {
         </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.6 }}
+          initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }} transition={{ delay: 0.6 }}
           style={{
             marginTop: 56, padding: "24px 32px",
             border: `1px solid ${theme.borderGold}`, borderRadius: 10,
@@ -1402,10 +1210,8 @@ function ArchSection({ theme }) {
           {LAYERS.map((l, i) => (
             <motion.div
               key={l.num}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
+              initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }} transition={{ delay: i * 0.1 }}
               onClick={() => setActiveLayer(i)}
               style={{
                 display: "flex", gap: 20,
@@ -1413,8 +1219,7 @@ function ArchSection({ theme }) {
                 borderLeft: `2.5px solid ${activeLayer === i ? l.color : theme.textFaint}`,
                 cursor: "pointer",
                 background: activeLayer === i ? `rgba(${hex2rgb(l.color)},0.05)` : "transparent",
-                transition: "all 0.3s ease",
-                borderRadius: "0 6px 6px 0",
+                transition: "all 0.3s ease", borderRadius: "0 6px 6px 0",
               }}
             >
               <div style={{ fontFamily: "'Cormorant Garant', serif", fontSize: 22, fontWeight: 700, color: l.color, minWidth: 32, flexShrink: 0, lineHeight: 1, paddingTop: 2, opacity: activeLayer === i ? 1 : 0.4, transition: "opacity 0.3s" }}>{l.num}</div>
@@ -1431,16 +1236,11 @@ function ArchSection({ theme }) {
 
         {/* Sticky schematic */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.93 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.75 }}
+          initial={{ opacity: 0, scale: 0.93 }} whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }} transition={{ duration: 0.75 }}
           style={{
-            border: `1px solid ${theme.borderSubtle}`,
-            borderRadius: 14,
-            padding: "32px 28px",
-            background: theme.surface,
-            backdropFilter: "blur(28px)",
+            border: `1px solid ${theme.borderSubtle}`, borderRadius: 14,
+            padding: "32px 28px", background: theme.surface, backdropFilter: "blur(28px)",
             boxShadow: `0 32px 80px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06)`,
             position: "sticky", top: 104,
           }}
@@ -1469,7 +1269,6 @@ function ArchSection({ theme }) {
                   style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 8, color: l.color, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}
                 >{activeLayer === i ? "ACTIVE ●" : "STANDBY"}</motion.div>
               </motion.div>
-
               {i < LAYERS.length - 1 && (
                 <div style={{ display: "flex", justifyContent: "center", margin: "2px 0" }}>
                   <motion.div
@@ -1504,7 +1303,7 @@ function ArchSection({ theme }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   DEPLOYMENT DOMAINS — enhanced cards
+   DEPLOYMENT DOMAINS
 ═══════════════════════════════════════════════════════ */
 const DOMAINS = [
   { icon: "⬡", tag: "Examination Ops",    title: "Examination Operations", desc: "End-to-end orchestration of large-scale examinations — center allocation, proctor coordination, logistics, and real-time disruption response for millions of candidates.", scale: "2M+ candidates" },
@@ -1516,62 +1315,38 @@ const DOMAINS = [
 
 function DomainCard({ d, theme, i }) {
   const [hov, setHov] = useState(false);
-
   return (
     <motion.div
-      initial={{ opacity: 0, y: 28 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.55, delay: i * 0.09 }}
-      onHoverStart={() => setHov(true)}
-      onHoverEnd={() => setHov(false)}
+      initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }} transition={{ duration: 0.55, delay: i * 0.09 }}
+      onHoverStart={() => setHov(true)} onHoverEnd={() => setHov(false)}
       style={{
         padding: "30px 26px",
         border: `1px solid ${hov ? theme.border : theme.borderSubtle}`,
         borderRadius: 12,
-        background: hov
-          ? (theme.isDark
-              ? `rgba(${hex2rgb(theme.crimson)},0.06)`
-              : `rgba(${hex2rgb(theme.crimson)},0.03)`)
-          : theme.glass,
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
+        background: hov ? (theme.isDark ? `rgba(${hex2rgb(theme.crimson)},0.06)` : `rgba(${hex2rgb(theme.crimson)},0.03)`) : theme.glass,
+        backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
         cursor: "default", position: "relative", overflow: "hidden",
         transition: "border-color 0.3s, background 0.3s",
-        boxShadow: hov
-          ? `0 20px 60px rgba(0,0,0,0.18), 0 0 0 1px ${theme.crimson}22`
-          : `0 2px 12px rgba(0,0,0,0.08)`,
+        boxShadow: hov ? `0 20px 60px rgba(0,0,0,0.18), 0 0 0 1px ${theme.crimson}22` : `0 2px 12px rgba(0,0,0,0.08)`,
         transform: hov ? "translateY(-4px)" : "translateY(0)",
       }}
     >
-      {/* Top accent line */}
       <AnimatePresence>
         {hov && (
           <motion.div
-            initial={{ opacity: 0, scaleX: 0 }}
-            animate={{ opacity: 1, scaleX: 1 }}
-            exit={{ opacity: 0, scaleX: 0 }}
+            initial={{ opacity: 0, scaleX: 0 }} animate={{ opacity: 1, scaleX: 1 }} exit={{ opacity: 0, scaleX: 0 }}
             style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1.5, background: `linear-gradient(90deg, transparent 0%, ${theme.crimson} 50%, transparent 100%)`, transformOrigin: "left" }}
           />
         )}
       </AnimatePresence>
-
-      {/* Corner glow */}
       {hov && (
-        <div style={{
-          position: "absolute", top: -40, right: -40,
-          width: 120, height: 120,
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${theme.crimsonGlowSoft} 0%, transparent 70%)`,
-          pointerEvents: "none",
-        }} />
+        <div style={{ position: "absolute", top: -40, right: -40, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${theme.crimsonGlowSoft} 0%, transparent 70%)`, pointerEvents: "none" }} />
       )}
-
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
         <span style={{ fontSize: 24, color: hov ? theme.crimson : theme.textMuted, fontFamily: "monospace", transition: "color 0.3s" }}>{d.icon}</span>
         <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 8.5, color: theme.gold, letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 600, background: `rgba(${hex2rgb(theme.gold)},0.1)`, padding: "3px 8px", borderRadius: 4 }}>{d.scale}</span>
       </div>
-
       <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 9, color: theme.textMuted, letterSpacing: "0.18em", textTransform: "uppercase", display: "block", marginBottom: 10, fontWeight: 500 }}>{d.tag}</span>
       <h3 style={{ fontFamily: "'Cormorant Garant', serif", fontSize: 22, fontWeight: 500, color: theme.text, margin: "0 0 10px", lineHeight: 1.1 }}>{d.title}</h3>
       <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 300, lineHeight: 1.7, color: theme.textMuted, margin: 0 }}>{d.desc}</p>
@@ -1596,7 +1371,6 @@ function DomainsSection({ theme }) {
           where complexity exceeds human coordination capacity.
         </p>
       </motion.div>
-
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(230px,100%),1fr))", gap: 14 }}>
         {DOMAINS.map((d, i) => <DomainCard key={d.title} d={d} theme={theme} i={i} />)}
       </div>
@@ -1605,7 +1379,7 @@ function DomainsSection({ theme }) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   CTA SECTION — elevated with navigate
+   CTA SECTION — "Technical Documentation" → /mission-dossier
 ═══════════════════════════════════════════════════════ */
 function CTASection({ theme, navigate }) {
   return (
@@ -1630,19 +1404,16 @@ function CTASection({ theme, navigate }) {
         </p>
 
         <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+          {/* Primary: enter platform */}
           <motion.button
             whileHover={{ scale: 1.05, boxShadow: `0 20px 72px ${theme.crimsonGlow}, 0 4px 0 0 ${theme.crimsonLight}88` }}
             whileTap={{ scale: 0.97 }}
             onClick={() => navigate("/dashboard")}
             style={{
-              padding: "16px 52px",
-              background: theme.crimson, border: "none", borderRadius: 8,
-              color: "#F0EBE1",
-              fontFamily: "'Cormorant Garant', serif",
-              fontSize: 19, fontWeight: 600, fontStyle: "italic",
-              letterSpacing: "0.02em", cursor: "pointer",
-              transition: "box-shadow 0.35s",
-              position: "relative", overflow: "hidden",
+              padding: "16px 52px", background: theme.crimson, border: "none", borderRadius: 8,
+              color: "#F0EBE1", fontFamily: "'Cormorant Garant', serif",
+              fontSize: 19, fontWeight: 600, fontStyle: "italic", letterSpacing: "0.02em",
+              cursor: "pointer", transition: "box-shadow 0.35s", position: "relative", overflow: "hidden",
             }}
           >
             <motion.div
@@ -1650,31 +1421,31 @@ function CTASection({ theme, navigate }) {
               transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
               style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)", pointerEvents: "none" }}
             />
-            Request Early Access
+            Enter Mission Control
           </motion.button>
 
+          {/* Secondary: Mission Dossier → /mission-dossier */}
           <motion.button
-            whileHover={{ scale: 1.03 }}
+            whileHover={{ scale: 1.03, borderColor: theme.gold, color: theme.gold }}
             whileTap={{ scale: 0.97 }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = theme.gold; e.currentTarget.style.color = theme.gold; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = theme.borderSubtle; e.currentTarget.style.color = theme.textMuted; }}
+            onClick={() => navigate("/mission-dossier")}
             style={{
               padding: "16px 40px", background: "transparent",
               border: `1px solid ${theme.borderSubtle}`, borderRadius: 8, color: theme.textMuted,
               fontFamily: "'Space Grotesk', sans-serif",
               fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase",
               fontWeight: 600, cursor: "pointer", transition: "all 0.24s",
+              display: "flex", alignItems: "center", gap: 10,
             }}
           >
-            Technical Documentation
+            <span style={{ fontSize: 14, opacity: 0.7 }}>◈</span>
+            Mission Dossier
           </motion.button>
         </div>
 
         <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
+          initial={{ opacity: 0 }} whileInView={{ opacity: 1 }}
+          viewport={{ once: true }} transition={{ delay: 0.4 }}
           style={{ marginTop: 64, display: "flex", justifyContent: "center", gap: "clamp(24px, 5vw, 64px)", flexWrap: "wrap" }}
         >
           {[
@@ -1697,14 +1468,13 @@ function CTASection({ theme, navigate }) {
 /* ═══════════════════════════════════════════════════════
    FOOTER
 ═══════════════════════════════════════════════════════ */
-function Footer({ theme }) {
+function Footer({ theme, navigate }) {
   return (
     <footer style={{
       padding: "28px clamp(24px, 5.5vw, 88px)",
       borderTop: `1px solid ${theme.borderSubtle}`,
-      display: "flex", justifyContent: "space-between",
-      alignItems: "center", flexWrap: "wrap", gap: 16,
-      position: "relative", zIndex: 10,
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      flexWrap: "wrap", gap: 16, position: "relative", zIndex: 10,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <svg width="18" height="18" viewBox="0 0 30 30" fill="none">
@@ -1717,8 +1487,23 @@ function Footer({ theme }) {
       <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 9, color: theme.textFaint, letterSpacing: "0.18em", textTransform: "uppercase" }}>Autonomous Multi-Agent Intelligence Platform</span>
 
       <div style={{ display: "flex", gap: 24 }}>
+        {/* Mission Dossier link in footer */}
+        <button
+          onClick={() => navigate("/mission-dossier")}
+          style={{
+            fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: theme.textFaint,
+            letterSpacing: "0.1em", textDecoration: "none", textTransform: "uppercase",
+            fontWeight: 500, background: "none", border: "none", cursor: "pointer",
+            transition: "color 0.2s",
+          }}
+          onMouseEnter={e => e.target.style.color = theme.gold}
+          onMouseLeave={e => e.target.style.color = theme.textFaint}
+        >
+          Mission Dossier
+        </button>
         {["Privacy", "Security", "Terms"].map(l => (
-          <a key={l} href="#" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: theme.textFaint, letterSpacing: "0.1em", textDecoration: "none", textTransform: "uppercase", fontWeight: 500, transition: "color 0.2s" }}
+          <a key={l} href="#"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, color: theme.textFaint, letterSpacing: "0.1em", textDecoration: "none", textTransform: "uppercase", fontWeight: 500, transition: "color 0.2s" }}
             onMouseEnter={e => e.target.style.color = theme.textMuted}
             onMouseLeave={e => e.target.style.color = theme.textFaint}
           >{l}</a>
@@ -1738,7 +1523,6 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   const handleIntroComplete = useCallback(() => setIntroComplete(true), []);
-
   const STATUS_BAR_H = 28;
 
   return (
@@ -1780,22 +1564,12 @@ export default function HomePage() {
         }
       `}</style>
 
-      {/* Cinematic intro */}
       <IntroGate onComplete={handleIntroComplete} theme={theme} />
-
-      {/* Ambient bg layers */}
       <AtmosphericBg theme={theme} />
-
-      {/* Sakura rain */}
       <SakuraPetals isDark={isDark} />
-
-      {/* Cursor glow */}
       <CursorGlow theme={theme} />
-
-      {/* Mission status bar */}
       <MissionStatusBar theme={theme} visible={introComplete} />
 
-      {/* Main content */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: introComplete ? 1 : 0 }}
@@ -1809,12 +1583,7 @@ export default function HomePage() {
           showStatusBar={true}
           navigate={navigate}
         />
-        <HeroSection
-          theme={theme}
-          isDark={isDark}
-          navigate={navigate}
-          topOffset={STATUS_BAR_H}
-        />
+        <HeroSection theme={theme} isDark={isDark} navigate={navigate} topOffset={STATUS_BAR_H} />
         <SectionDivider theme={theme} accent="gold" />
         <DecisionFlow theme={theme} />
         <SectionDivider theme={theme} accent="sakura" />
@@ -1822,7 +1591,7 @@ export default function HomePage() {
         <SectionDivider theme={theme} accent="crimson" />
         <DomainsSection theme={theme} />
         <CTASection theme={theme} navigate={navigate} />
-        <Footer theme={theme} />
+        <Footer theme={theme} navigate={navigate} />
       </motion.div>
     </>
   );
