@@ -292,6 +292,7 @@ function Nav({ isDark, toggleTheme, theme }) {
     { label: "Agents",   path: "/agents" },
     { label: "Missions", path: "/missions" },
     { label: "Analytics",path: "/analytics" },
+    {label:"Orchestrate",path:"/orchestrate"},
   ];
 
   return (
@@ -309,7 +310,7 @@ function Nav({ isDark, toggleTheme, theme }) {
         borderBottom: `1px solid ${theme.borderSubtle}`,
       }}
     >
-      <button onClick={() => navigate("/dashboard")}
+      <button onClick={() => navigate("/")}
         style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer" }}>
         <svg width="24" height="24" viewBox="0 0 30 30" fill="none">
           <polygon points="15,2 28,9.5 28,20.5 15,28 2,20.5 2,9.5" stroke={theme.crimson} strokeWidth="1.5" fill="none" />

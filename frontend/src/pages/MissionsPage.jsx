@@ -361,6 +361,7 @@ export function Nav({ isDark, toggleTheme, theme, activePath }) {
     { label: "Agents",    path: "/agents"     },
     { label: "Missions",  path: "/missions"   },
     { label: "Analytics", path: "/analytics"  },
+    { label:"Orchestrate",path:"/orchestrate" },
   ];
 
   return (
@@ -380,7 +381,7 @@ export function Nav({ isDark, toggleTheme, theme, activePath }) {
     >
       {/* Logo */}
       <button
-        onClick={() => navigate("/dashboard")}
+        onClick={() => navigate("/")}
         aria-label="Go to dashboard"
         style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer" }}
       >
