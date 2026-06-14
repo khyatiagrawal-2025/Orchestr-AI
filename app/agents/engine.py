@@ -16,9 +16,8 @@ class OrchestrAIEngine:
         """
         print("[Engine] Multi-Agent consensus loop engaged.")
 
-        # ==========================================
+    
         # 1. CENTER INTELLIGENCE AGENT PHASE
-        # ==========================================
         self._log_agent_action(
             "Center Intelligence Agent",
             "Evaluating infrastructural readiness scores for all registered test nodes.",
@@ -35,9 +34,8 @@ class OrchestrAIEngine:
                 {"flagged_centers": flagged_center_ids}
             )
 
-        # ==========================================
+        
         # 2. RISK PREDICTION AGENT PHASE
-        # ==========================================
         self._log_agent_action(
             "Risk Prediction Agent",
             "Analyzing commuter traffic vectors and capacity thresholds for safety violations.",
@@ -75,13 +73,12 @@ class OrchestrAIEngine:
         if reallocation_count > 0:
             self._log_agent_action(
                 "Risk Prediction Agent",
-                f"✅ RISK MITIGATED: Autonomously redistributed {reallocation_count} student slots to prevent transit gridlock.",
+                f"RISK MITIGATED: Autonomously redistributed {reallocation_count} student slots to prevent transit gridlock.",
                 {"slots_moved": reallocation_count}
             )
 
-        # ==========================================
+        
         # 3. OPERATIONS AGENT FINALIZATION
-        # ==========================================
         self._log_agent_action(
             "Operations Agent",
             "Compiling final structural network state blueprints for administrative approval.",
