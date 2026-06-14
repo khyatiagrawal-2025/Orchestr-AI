@@ -1039,41 +1039,54 @@ export default function AnalyticsPage() {
   const theme = isDark ? THEMES.dark : THEMES.light;
   const navigate = useNavigate();
 
+  // 1. STATE FOR LIVE BACKEND DATA
+  const [dashboardData, setDashboardData] = useState({
+    total_students_allocated: 0,
+    average_travel_distance_km: 0,
+  });
+
+  // 2. FETCH HOOK: Connects to your FastAPI /overview endpoint
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/api/v1/analytics/overview')
+      .then(res => res.json())
+      .then(data => {
+        if (data.metrics) {
+          setDashboardData(data.metrics);
+        }
+      })
+      .catch(err => console.error("Backend offline, using fallback:", err));
+  }, []);
+
   const toggleTheme = useCallback(() => {
     setIsDark(d => {
       const next = !d;
-      try { localStorage.setItem("orchestrai-theme", next?"dark":"light"); } catch {}
+      try { localStorage.setItem("orchestrai-theme", next ? "dark" : "light"); } catch {}
       return next;
     });
   }, []);
 
-  // Read latest orchestration from localStorage if available
+  // Read latest orchestration from localStorage for the "Latest Mission" summary
   const latestMission = useMemo(() => {
     try {
       const raw = localStorage.getItem("orchestrai-last-mission");
       if (raw) {
         const data = JSON.parse(raw);
-        if (data.name && data.candidateCount) return {
+        return {
           name: data.name,
           candidates: data.candidateCount,
-          centers: data.centers || "4,820",
+          // Injecting our live metrics from the backend fetch here:
+          resolution: `${dashboardData.average_travel_distance_km}km`,
+          decisionsCount: dashboardData.total_students_allocated,
           region: data.regions === "national" ? "National" : data.regions,
-          priority: data.priority || "HIGH",
-          travelReduction: 23,
-          riskReduction: 75,
-          capacityUtil: 94,
-          confidence: 97,
-          resolution: "6.2s",
-          decisionsCount: 847,
         };
       }
     } catch {}
-    return DEMO_MISSIONS[0];
-  }, []);
+    return null;
+  }, [dashboardData]);
 
   return (
     <>
-      <InjectFonts/>
+      <InjectFonts />
       <style>{`
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
         html{scroll-behavior:smooth}

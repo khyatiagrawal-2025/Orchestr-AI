@@ -912,24 +912,38 @@ const COLLAB_POOL = [
 ];
 
 function CollaborationFeed({ theme }) {
-  const [items, setItems] = useState(COLLAB_POOL.slice(0, 4).map((m, i) => ({ ...m, id: i, ts: `${String(Math.floor(Math.random() * 9)).padStart(2, "0")}:${String(Math.floor(Math.random() * 60)).padStart(2, "0")}` })));
+  const [items, setItems] = useState([]);
   const scrollRef = useRef();
-  const poolIdx = useRef(4);
 
   useEffect(() => {
-    const iv = setInterval(() => {
-      const entry = COLLAB_POOL[poolIdx.current % COLLAB_POOL.length];
+    
+    const ws = new WebSocket('ws://127.0.0.1:8000/api/v1/stream/ws/telemetry');
+
+    ws.onmessage = (event) => {
+      const logPacket = JSON.parse(event.data);
       const now = new Date();
-      const ts = `${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
-      setItems(prev => [...prev.slice(-12), { ...entry, id: Date.now(), ts }]);
-      poolIdx.current++;
-    }, 2200);
-    return () => clearInterval(iv);
+      const ts = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+      setItems(prev => [
+        ...prev.slice(-12), 
+        { 
+          id: Date.now() + Math.random(),
+          from: logPacket.agent || "System",
+          to: "Core Engine",
+          icon: "◈→◬",
+          msg: logPacket.message,
+          ts: ts 
+        }
+      ]);
+    };
+
+    return () => ws.close();
   }, []);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [items]);
+
 
   const agentColor = (name) => AGENTS.find(a => a.name === name)?.color || theme.textMuted;
 

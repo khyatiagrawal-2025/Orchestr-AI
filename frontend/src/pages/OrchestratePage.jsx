@@ -1399,43 +1399,101 @@ function LaunchPanel({theme,isDark,config,onLaunch,isRunning,isDone}){
 /* ══════════════════════════════════════════════════════════
    ORCHESTRATION HOOK
 ══════════════════════════════════════════════════════════ */
-function useOrchestration(){
-  const [isRunning,setIsRunning]=useState(false);
-  const [isDone,setIsDone]=useState(false);
-  const [runningStep,setRunningStep]=useState(-1);
-  const [completedSteps,setCompletedSteps]=useState([]);
-  const [streamLines,setStreamLines]=useState([]);
+function useOrchestration() {
+  const [isRunning, setIsRunning] = useState(false);
+  const [isDone, setIsDone] = useState(false);
+  const [runningStep, setRunningStep] = useState(-1);
+  const [completedSteps, setCompletedSteps] = useState([]);
+  const [streamLines, setStreamLines] = useState([]);
 
-  const launch=useCallback(()=>{
-    setIsRunning(true);setIsDone(false);setRunningStep(-1);setCompletedSteps([]);setStreamLines([]);
-    let step=0;
-    const run=()=>{
-      if(step>=EXECUTION_STEPS.length){setRunningStep(-1);setIsRunning(false);setIsDone(true);return;}
-      const cur=EXECUTION_STEPS[step];
-      setRunningStep(step);
-      cur.outputs.forEach((out,oi)=>{
-        setTimeout(()=>{setStreamLines(prev=>[...prev.slice(-30),{text:out,color:cur.color,icon:cur.icon}]);},oi*(cur.duration/cur.outputs.length));
+  const launch = useCallback(async () => {
+    setIsRunning(true);
+    setIsDone(false);
+    setRunningStep(-1);
+    setCompletedSteps([]);
+    setStreamLines([]);
+
+    try {
+      // 1. Post allocation directives to your local FastAPI server
+      const response = await fetch('http://127.0.0.1:8000/api/v1/orchestrate/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
       });
-      setTimeout(()=>{setCompletedSteps(p=>[...p,step]);step++;run();},cur.duration);
-    };
-    setTimeout(run,300);
-  },[]);
+      
+      if (!response.ok) throw new Error("FastAPI resource core refused compilation request");
 
-  const reset=useCallback(()=>{setIsRunning(false);setIsDone(false);setRunningStep(-1);setCompletedSteps([]);setStreamLines([]);},[]);
+      // 2. Open live WebSocket listener pipeline
+      const ws = new WebSocket('ws://127.0.0.1:8000/api/v1/stream/ws/telemetry');
+      let stepCounter = 0;
 
-  return{isRunning,isDone,runningStep,completedSteps,streamLines,launch,reset};
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        // Push backend lines into the scrolling text window
+        setStreamLines(prev => [
+          ...prev.slice(-25), 
+          { text: data.message, color: data.agent === 'Risk Prediction Agent' ? '#BF8C2C' : '#C4002B', icon: '◈' }
+        ]);
+
+        // Advance step progress lights based on the log sequence
+        if (stepCounter < 5) {
+          setRunningStep(stepCounter);
+          setCompletedSteps(p => [...p, stepCounter]);
+          stepCounter++;
+        }
+      };
+
+      setTimeout(() => {
+        ws.close();
+        setIsRunning(false);
+        setIsDone(true);
+      }, 6500);
+
+    } catch (err) {
+      console.error("handshake connection exception:", err);
+      setIsRunning(false);
+    }
+  }, []);
+
+  const reset = useCallback(() => {
+    setIsRunning(false);
+    setIsDone(false);
+    setRunningStep(-1);
+    setCompletedSteps([]);
+    setStreamLines([]);
+  }, []);
+
+  return { isRunning, isDone, runningStep, completedSteps, streamLines, launch, reset };
 }
-
 /* ══════════════════════════════════════════════════════════
    PAGE ROOT
 ══════════════════════════════════════════════════════════ */
 const DEFAULT_CONFIG={name:"",candidateCount:"",centers:"",regions:"national",priority:"HIGH",objectives:[0,2],instructions:""};
+
+function CommandHeader({ theme, config, isRunning, isDone }) {
+  const status = isDone ? "RESOLVED" : isRunning ? "EXECUTING" : config.name ? "CONFIGURED" : "CONFIGURING";
+  const statusColor = isDone ? "#2EBFB0" : isRunning ? theme.crimson : theme.gold;
+  return (
+    <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.7}}
+      style={{paddingTop:"clamp(20px,3vw,36px)",paddingBottom:"clamp(18px,2.5vw,26px)",borderBottom:`1px solid ${theme.borderSubtle}`,marginBottom:"clamp(18px,2vw,26px)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+        <div style={{width:22,height:1.5,background:theme.crimson}}/>
+        <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:9,letterSpacing:"0.26em",color:theme.crimson,textTransform:"uppercase",fontWeight:500}}>OrchestrAI · Operation Command</span>
+      </div>
+      <h1 style={{fontFamily:"'Cormorant Garant',serif",fontSize:"clamp(32px,4.2vw,56px)",fontWeight:400,lineHeight:1.0,color:theme.text,margin:0}}>
+        Orchestrate <em style={{color:theme.crimson}}>Operation</em>
+      </h1>
+    </motion.div>
+  );
+}
+
 
 export default function OrchestratePage(){
   const [isDark,setIsDark]=useState(()=>{
     try{return localStorage.getItem("orchestrai-theme")!=="light";}catch{return true;}
   });
   const theme=isDark?THEMES.dark:THEMES.light;
+  const navigate = useNavigate();
 
   const toggleTheme=useCallback(()=>{
     setIsDark(d=>{const next=!d;try{localStorage.setItem("orchestrai-theme",next?"dark":"light");}catch{}return next;});
@@ -1446,9 +1504,22 @@ export default function OrchestratePage(){
 
   const{isRunning,isDone,runningStep,completedSteps,streamLines,launch,reset}=useOrchestration();
 
+  // Define latestMission so it doesn't crash
+  const latestMission = useMemo(() => ({
+    name: config.name || "Pending",
+    candidates: config.candidateCount || "0",
+    region: config.regions || "National",
+    resolution: "6.2s"
+  }), [config]);
+
   const handleLaunch=useCallback(()=>{
-    if(isDone){reset();setConfig({...DEFAULT_CONFIG});}else{launch();}
-  },[isDone,launch,reset]);
+    if(isDone){
+        reset(); 
+        setConfig({...DEFAULT_CONFIG});
+    } else {
+        launch(config); // Now passing the config!
+    }
+  },[isDone,launch,reset,config]);
 
   return(
     <>
@@ -1479,133 +1550,40 @@ export default function OrchestratePage(){
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
       `}</style>
 
+
       <div style={{position:"fixed",inset:0,zIndex:0,background:theme.bgGradient,pointerEvents:"none"}}/>
       <SakuraPetals isDark={isDark}/>
-      <div style={{position:"fixed",inset:0,zIndex:1,pointerEvents:"none",
-        backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        opacity:isDark?.02:.012,mixBlendMode:"overlay"}}/>
-
       <div style={{position:"relative",zIndex:2}}>
         <Nav isDark={isDark} toggleTheme={toggleTheme} theme={theme}/>
-
         <div style={{paddingTop:58,padding:"58px clamp(14px,3vw,44px) 60px",maxWidth:1600,margin:"0 auto"}}>
+          
+          <CommandHeader theme={theme} config={config} isRunning={isRunning} isDone={isDone} />
 
-          {/* ── HEADER ── */}
-          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.7}}
-            style={{paddingTop:"clamp(20px,3vw,36px)",paddingBottom:"clamp(18px,2.5vw,26px)",borderBottom:`1px solid ${theme.borderSubtle}`,marginBottom:"clamp(18px,2vw,26px)"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-              <div style={{width:22,height:1.5,background:theme.crimson}}/>
-              <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:9,letterSpacing:"0.26em",color:theme.crimson,textTransform:"uppercase",fontWeight:500}}>OrchestrAI · Operation Command</span>
-            </div>
-            <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",flexWrap:"wrap",gap:14,marginBottom:20}}>
-              <div>
-                <h1 style={{fontFamily:"'Cormorant Garant',serif",fontSize:"clamp(32px,4.2vw,56px)",fontWeight:400,lineHeight:1.0,color:theme.text,margin:0}}>
-                  Orchestrate <em style={{color:theme.crimson}}>Operation</em>
-                </h1>
-                <p style={{fontFamily:"'Inter',sans-serif",fontSize:13,color:theme.textMuted,fontWeight:300,marginTop:7,maxWidth:520,lineHeight:1.65}}>
-                  Configure a mission and 5 specialized AI agents coordinate, reason, and resolve — without human bottleneck. Every decision is explained.
-                </p>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 18px",border:`1px solid ${theme.borderGold}`,borderRadius:8,background:`rgba(${h2r(theme.gold)},.05)`,backdropFilter:"blur(16px)"}}>
-                <motion.div animate={{scale:[1,1.3,1]}} transition={{duration:2,repeat:Infinity}}
-                  style={{width:7,height:7,borderRadius:"50%",background:isRunning?theme.crimson:isDone?"#2EBFB0":"#2EBFB0"}}/>
-                <div>
-                  <div style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:9,color:isRunning?theme.crimson:"#2EBFB0",letterSpacing:"0.14em",fontWeight:700}}>
-                    {isRunning?"AGENTS EXECUTING":isDone?"MISSION RESOLVED":"AGENT MESH READY"}
-                  </div>
-                  <div style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:8,color:theme.textFaint,letterSpacing:"0.06em"}}>5 agents · reasoning visible</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Status strip */}
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {[
-                {label:"Mission Status",value:isDone?"RESOLVED":isRunning?"EXECUTING":config.name?"CONFIGURED":"CONFIGURING",color:isDone?"#2EBFB0":isRunning?theme.crimson:config.name?theme.gold:theme.textMuted},
-                {label:"Active Agents",value:isRunning||isDone?"5 / 5":"0 / 5",color:theme.crimson},
-                {label:"Decision Transparency",value:"Full Reasoning",color:"#7C6FE8"},
-                {label:"Priority",value:config.priority,color:config.priority==="CRITICAL"?theme.crimson:config.priority==="HIGH"?theme.gold:"#2EBFB0"},
-              ].map((s,i)=>(
-                <motion.div key={s.label} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{delay:.1+i*.06}}
-                  style={{flex:1,minWidth:120,padding:"12px 16px",border:`1px solid ${theme.borderSubtle}`,borderRadius:8,background:theme.glass,backdropFilter:"blur(16px)"}}>
-                  <div style={{fontFamily:"'Cormorant Garant',serif",fontSize:"clamp(18px,2vw,26px)",fontWeight:700,color:s.color,lineHeight:1,marginBottom:4}}>{s.value}</div>
-                  <div style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:8,color:theme.textFaint,letterSpacing:"0.1em",textTransform:"uppercase"}}>{s.label}</div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* ── THREE COLUMN: Builder | Launch | (stack: Twin + Reasoning) ── */}
-          <div className="op-tri" style={{display:"grid",gridTemplateColumns:"1fr .65fr 1fr",gap:"clamp(12px,1.6vw,20px)",marginBottom:"clamp(12px,1.6vw,20px)",alignItems:"start"}}>
-
-            {/* LEFT: Mission Builder */}
+          <div className="op-tri" style={{display:"grid",gridTemplateColumns:"1fr .65fr 1fr",gap:"clamp(12px,1.6vw,20px)",marginBottom:"clamp(14px,1.8vw,22px)",alignItems:"start"}}>
             <MissionBuilder theme={theme} config={config} onChange={handleConfigChange}/>
-
-            {/* CENTER: 3D + Launch */}
             <div className="op-center">
               <LaunchPanel theme={theme} isDark={isDark} config={config} onLaunch={handleLaunch} isRunning={isRunning} isDone={isDone}/>
             </div>
-
-            {/* RIGHT: Digital Twin stacked above Agent Reasoning */}
             <div style={{display:"flex",flexDirection:"column",gap:"clamp(12px,1.6vw,20px)"}}>
               <DigitalTwinMap theme={theme} isDark={isDark} config={config} isRunning={isRunning} isDone={isDone}/>
             </div>
           </div>
 
-          {/* ── AGENT REASONING (full width) ── */}
           <div style={{marginBottom:"clamp(12px,1.6vw,20px)"}}>
             <AgentReasoningPanel theme={theme} isDark={isDark} runningStep={runningStep}
               completedSteps={completedSteps} streamLines={streamLines} isRunning={isRunning} isDone={isDone}/>
           </div>
 
-          {/* ── DECISION INTELLIGENCE ── */}
           <AnimatePresence>
             {isDone&&(
-              <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} exit={{opacity:0}}
-                style={{marginBottom:"clamp(12px,1.6vw,20px)",border:`1px solid ${"#7C6FE8"}44`,borderRadius:14,
-                  background:theme.surface,backdropFilter:"blur(24px)",overflow:"hidden"}}>
-                <div style={{padding:"16px 22px",borderBottom:`1px solid ${theme.borderSubtle}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{width:14,height:1.5,background:"#7C6FE8"}}/>
-                    <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:9,color:"#7C6FE8",letterSpacing:"0.2em",textTransform:"uppercase",fontWeight:500}}>Step 4 · Decision Intelligence · 3 Recommendations</span>
-                  </div>
-                  <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:8,color:"#7C6FE8",letterSpacing:"0.1em"}}>Click Details to see full agent reasoning</span>
+              <>
+                <DecisionIntelligence theme={theme} isDone={isDone} config={config} />
+                <div style={{marginBottom:"clamp(12px,1.6vw,20px)"}}>
+                  <MissionOutcome theme={theme} isDone={isDone} config={config}/>
                 </div>
-                <div style={{padding:"20px 22px"}}>
-                  <DecisionIntelligence theme={theme} isDone={isDone} config={config}/>
-                </div>
-              </motion.div>
+              </>
             )}
           </AnimatePresence>
-
-          {/* ── MISSION OUTCOME ── */}
-          <AnimatePresence>
-            {isDone&&(
-              <div style={{marginBottom:"clamp(12px,1.6vw,20px)"}}>
-                <MissionOutcome theme={theme} isDone={isDone} config={config}/>
-              </div>
-            )}
-          </AnimatePresence>
-
-          {/* ── FOOTER ── */}
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.8}}
-            style={{paddingTop:18,borderTop:`1px solid ${theme.borderSubtle}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <svg width="15" height="15" viewBox="0 0 30 30" fill="none">
-                <polygon points="15,2 28,9.5 28,20.5 15,28 2,20.5 2,9.5" stroke={theme.crimson} strokeWidth="1.5" fill="none"/>
-                <polygon points="15,8 22,12.5 22,17.5 15,22 8,17.5 8,12.5" fill={theme.crimson} opacity=".8"/>
-              </svg>
-              <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:10,color:theme.textFaint,letterSpacing:"0.1em"}}>OrchestrAI © 2025 · Orchestration Engine v4.0.0</span>
-            </div>
-            <div style={{display:"flex",gap:14}}>
-              {[["Agent Mesh","READY","#2EBFB0"],["Decision Engine","ONLINE","#7C6FE8"],["Signal Bus","STREAMING",theme.gold]].map(([l,v,c])=>(
-                <div key={l} style={{display:"flex",alignItems:"center",gap:5}}>
-                  <div style={{width:4,height:4,borderRadius:"50%",background:c}}/>
-                  <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:8,color:theme.textFaint,letterSpacing:"0.08em",textTransform:"uppercase"}}>{l}: <span style={{color:c}}>{v}</span></span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
         </div>
       </div>
     </>
