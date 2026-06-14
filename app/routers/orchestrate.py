@@ -6,6 +6,7 @@ from app.models.student import Student
 from app.models.center import ExamCenter
 from app.models.allocation import Allocation
 from app.models.audit_log import AgentAuditLog
+from app.agents.engine import OrchestrAIEngine
 
 router = APIRouter()
 
@@ -86,6 +87,11 @@ def run_allocation_pipeline(db: Session):
             
             successful_allocations += 1
             total_travel_distance += min_distance
+    
+    
+    # MULTI AGENT
+    agent_system = OrchestrAIEngine(db)
+    agent_system.run_agent_consensus_loop()
 
     # 4. Finalize calculations & update logs
     avg_distance = round(total_travel_distance / successful_allocations, 1) if successful_allocations > 0 else 0

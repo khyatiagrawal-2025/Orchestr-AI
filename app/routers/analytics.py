@@ -5,10 +5,11 @@ from app.core.database import get_db
 from app.models.allocation import Allocation
 from app.models.center import ExamCenter
 from app.models.audit_log import AgentAuditLog
+from app.schemas.analytics import AnalyticsOverviewResponse
 
 router = APIRouter()
 
-@router.get("/overview")
+@router.get("/overview", response_model=AnalyticsOverviewResponse)
 def get_dashboard_analytics_overview(db: Session = Depends(get_db)):
     """
     Aggregates and formats core performance stats for the UI control summary cards.
