@@ -1493,9 +1493,27 @@ export default function AnalyticsPage() {
     });
   }, []);
 
+  // Live state placeholders to swap mock values with database records
+  const [allocatedStudents, setAllocatedStudents] = useState(28647);
+  const [averageDistance, setAverageDistance] = useState(31.4);
+
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/api/v1/analytics/overview')
+      .then(res => res.json())
+      .then(data => {
+        if (data.metrics) {
+          // Overwrite static frontend counters with active table states
+          setAllocatedStudents(data.metrics.total_students_allocated || 100);
+          setAverageDistance(data.metrics.average_travel_distance_km || 12.4);
+        }
+      })
+      .catch(err => console.warn("Using local analytics presets (server disconnected):", err));
+  }, []);
+
   return (
     <>
       <InjectFonts />
+      
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }

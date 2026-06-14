@@ -911,19 +911,33 @@ const COLLAB_POOL = [
 ];
 
 function CollaborationFeed({ theme }) {
-  const [items, setItems] = useState(COLLAB_POOL.slice(0, 4).map((m, i) => ({ ...m, id: i, ts: `${String(Math.floor(Math.random() * 9)).padStart(2, "0")}:${String(Math.floor(Math.random() * 60)).padStart(2, "0")}` })));
+  const [items, setItems] = useState([]);
   const scrollRef = useRef();
-  const poolIdx = useRef(4);
 
   useEffect(() => {
-    const iv = setInterval(() => {
-      const entry = COLLAB_POOL[poolIdx.current % COLLAB_POOL.length];
+    // Open a persistent listener pipeline straight to your stream endpoint
+    const ws = new WebSocket('ws://127.0.0.1:8000/api/v1/stream/ws/telemetry');
+
+    ws.onmessage = (event) => {
+      const logPacket = JSON.parse(event.data);
       const now = new Date();
-      const ts = `${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
-      setItems(prev => [...prev.slice(-12), { ...entry, id: Date.now(), ts }]);
-      poolIdx.current++;
-    }, 2200);
-    return () => clearInterval(iv);
+      const timestamp = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+
+      // Dynamically append new incoming agent items directly into the scrolling terminal
+      setItems(prev => [
+        ...prev.slice(-10), 
+        {
+          id: Date.now() + Math.random(),
+          from: logPacket.agent || "System",
+          to: "Core Engine",
+          icon: "◈→◬",
+          msg: logPacket.message,
+          ts: timestamp
+        }
+      ]);
+    };
+
+    return () => ws.close();
   }, []);
 
   useEffect(() => {
@@ -935,14 +949,9 @@ function CollaborationFeed({ theme }) {
   return (
     <div ref={scrollRef} style={{ height: 240, overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
       {items.map((item, i) => (
-        <motion.div key={item.id}
-          initial={{ opacity: 0, x: -8 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.28 }}
+        <motion.div key={item.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.28 }}
           style={{
-            display: "flex", alignItems: "flex-start", gap: 10,
-            padding: "9px 12px",
-            borderRadius: 6,
+            display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 12px", borderRadius: 6,
             background: i === items.length - 1 ? `rgba(${hex2rgb(agentColor(item.from))},0.05)` : "transparent",
             borderLeft: i === items.length - 1 ? `2px solid ${agentColor(item.from)}` : "2px solid transparent",
           }}>

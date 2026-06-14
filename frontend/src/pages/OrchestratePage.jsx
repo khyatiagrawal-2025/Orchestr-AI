@@ -1564,29 +1564,62 @@ function useOrchestration() {
   const [completedSteps, setCompletedSteps] = useState([]);
   const [streamLines, setStreamLines] = useState([]);
 
-  const launch = useCallback(() => {
-    setIsRunning(true); setIsDone(false);
-    setRunningStep(-1); setCompletedSteps([]); setStreamLines([]);
-    let step = 0;
-    const run = () => {
-      if (step >= EXECUTION_STEPS.length) {
-        setRunningStep(-1); setIsRunning(false); setIsDone(true); return;
-      }
-      const cur = EXECUTION_STEPS[step];
-      setRunningStep(step);
-      cur.outputs.forEach((out,oi) => {
-        setTimeout(() => {
-          setStreamLines(prev => [...prev.slice(-30), { text:out, color:cur.color, icon:cur.icon }]);
-        }, oi*(cur.duration/cur.outputs.length));
+  const launch = useCallback(async () => {
+    setIsRunning(true);
+    setIsDone(false);
+    setRunningStep(-1);
+    setCompletedSteps([]);
+    setStreamLines([]);
+
+    try {
+      // 1. Trigger the real multi-agent allocation loop on your FastAPI server
+      const response = await fetch('http://127.0.0.1:8000/api/v1/orchestrate/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
       });
-      setTimeout(() => { setCompletedSteps(p=>[...p,step]); step++; run(); }, cur.duration);
-    };
-    setTimeout(run, 300);
+      
+      if (!response.ok) throw new Error("Backend engine failed to initialize allocation pipeline");
+
+      // 2. Attach a persistent WebSocket pipe to catch real-time agent output changes
+      const ws = new WebSocket('ws://127.0.0.1:8000/api/v1/stream/ws/telemetry');
+      let stepCounter = 0;
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        // Map incoming live logs directly onto the UI timeline slots
+        setStreamLines(prev => [
+          ...prev.slice(-25), 
+          { text: data.message, color: data.type === 'system' ? '#BF8C2C' : '#C4002B', icon: '◈' }
+        ]);
+
+        // Progressively illuminate phase indicators as logs stream down
+        if (stepCounter < 5) {
+          setRunningStep(stepCounter);
+          setCompletedSteps(p => [...p, stepCounter]);
+          stepCounter++;
+        }
+      };
+
+      // Wrap up the animation sequence gracefully when the processing finishes
+      setTimeout(() => {
+        ws.close();
+        setIsRunning(false);
+        setIsDone(true);
+      }, 7000);
+
+    } catch (err) {
+      console.error("Connection matrix error:", err);
+      setIsRunning(false);
+    }
   }, []);
 
   const reset = useCallback(() => {
-    setIsRunning(false); setIsDone(false);
-    setRunningStep(-1); setCompletedSteps([]); setStreamLines([]);
+    setIsRunning(false); 
+    setIsDone(false);
+    setRunningStep(-1); 
+    setCompletedSteps([]); 
+    setStreamLines([]);
   }, []);
 
   return { isRunning, isDone, runningStep, completedSteps, streamLines, launch, reset };
