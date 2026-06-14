@@ -1290,7 +1290,7 @@ function Nav({ isDark, toggleTheme, theme, missionName, missionCode }) {
       }}>
       {/* Logo + breadcrumb */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer" }}>
+        <button onClick={() => navigate("/dashboard")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer" }}>
           <svg width="22" height="22" viewBox="0 0 30 30" fill="none">
             <polygon points="15,2 28,9.5 28,20.5 15,28 2,20.5 2,9.5" stroke={theme.crimson} strokeWidth="1.5" fill="none" />
             <polygon points="15,8 22,12.5 22,17.5 15,22 8,17.5 8,12.5" fill={theme.crimson} opacity="0.85" />
@@ -1325,6 +1325,31 @@ function Nav({ isDark, toggleTheme, theme, missionName, missionCode }) {
           <motion.div animate={{ x: isDark ? 19 : 2 }} transition={{ type: "spring", stiffness: 340, damping: 32 }}
             style={{ width: 16, height: 16, borderRadius: "50%", background: isDark ? "#F0EBE1" : "#0A0716", position: "absolute", top: 2 }} />
         </button>
+
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={() => navigate("/")}
+          style={{
+            background: "transparent",
+            border: `1px solid ${theme.borderSubtle}`,
+            borderRadius: 5,
+            padding: "4px 10px",
+            cursor: "pointer",
+            color: theme.textMuted,
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 9,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            fontWeight: 600,
+            transition: "all 0.2s",
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = theme.crimson; e.currentTarget.style.color = theme.text; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = theme.borderSubtle; e.currentTarget.style.color = theme.textMuted; }}
+        >
+          Exit Platform
+        </motion.button>
       </div>
     </motion.nav>
   );

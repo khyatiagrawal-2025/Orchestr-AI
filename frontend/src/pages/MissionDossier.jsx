@@ -28,14 +28,7 @@ import {
   motion, useScroll, useTransform, useMotionValue, useSpring,
   AnimatePresence,
 } from "framer-motion";
-
-// React Router — graceful fallback
-let useNavigate;
-try {
-  ({ useNavigate } = require("react-router-dom"));
-} catch {
-  useNavigate = () => (path) => { window.location.href = path; };
-}
+import { useNavigate } from "react-router-dom";
 
 /* ═══════════════════════════════════════════════════════
    THEME SYSTEM — identical to HomePage
@@ -407,6 +400,23 @@ function Navbar({ isDark, toggleTheme, theme, navigate }) {
             style={{ width: 18, height: 18, borderRadius: "50%", background: isDark ? "#F0EBE1" : "#0A0716", position: "absolute", top: 2 }}
           />
         </button>
+
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => navigate("/dashboard")}
+          style={{
+            padding: "8px 18px",
+            background: theme.crimson, border: "none", borderRadius: 6,
+            color: "#F0EBE1",
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+            fontWeight: 600, cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          Enter Platform
+        </motion.button>
       </div>
     </motion.nav>
   );
@@ -572,9 +582,9 @@ function HeroSection({ theme, navigate }) {
                 fontFamily: "'Cormorant Garant', serif",
                 fontSize: "clamp(44px, 6.5vw, 96px)",
                 fontWeight: 700, fontStyle: "italic",
-                background: `linear-gradient(128deg, ${theme.crimson} 0%, ${theme.gold} 55%, ${theme.sakura} 100%)`,
+                backgroundImage: `linear-gradient(128deg, ${theme.crimson} 0%, ${theme.gold} 55%, ${theme.sakura} 100%)`,
                 WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                backgroundClip: "text", lineHeight: 1.0, margin: 0,
+                backgroundClip: "text", color: "transparent", lineHeight: 1.0, margin: 0,
               }}
             >
               This is OrchestrAI.
@@ -2324,9 +2334,19 @@ function Footer({ theme, navigate }) {
    ROOT — MissionDossier
 ═══════════════════════════════════════════════════════ */
 export default function MissionDossier() {
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(() => {
+    try { return localStorage.getItem("orchestrai-theme") !== "light"; } catch { return true; }
+  });
   const theme = isDark ? THEMES.dark : THEMES.light;
   const navigate = useNavigate();
+
+  const toggleTheme = useCallback(() => {
+    setIsDark(d => {
+      const next = !d;
+      try { localStorage.setItem("orchestrai-theme", next ? "dark" : "light"); } catch {}
+      return next;
+    });
+  }, []);
 
   return (
     <>
@@ -2373,7 +2393,7 @@ export default function MissionDossier() {
       <MissionStatusBar theme={theme} />
 
       {/* Navbar */}
-      <Navbar isDark={isDark} toggleTheme={() => setIsDark(p => !p)} theme={theme} navigate={navigate} />
+      <Navbar isDark={isDark} toggleTheme={toggleTheme} theme={theme} navigate={navigate} />
 
       {/* Page content */}
       <div style={{ position: "relative", zIndex: 2 }}>

@@ -20,13 +20,7 @@ import {
   AnimatePresence, animate,
 } from "framer-motion";
 import * as THREE from "three";
-
-let useNavigate;
-try {
-  ({ useNavigate } = require("react-router-dom"));
-} catch {
-  useNavigate = () => (path) => { window.location.href = path; };
-}
+import { useNavigate } from "react-router-dom";
 
 /* ═══════════════════════════════════════════════════════
    THEME SYSTEM
@@ -922,9 +916,9 @@ function HeroSection({ theme, isDark, navigate, topOffset }) {
               style={{
                 fontFamily: "'Cormorant Garant', serif", fontSize: "clamp(50px, 6.2vw, 90px)",
                 fontWeight: 700, fontStyle: "italic", lineHeight: 1.0,
-                background: `linear-gradient(128deg, ${theme.crimson} 0%, ${theme.gold} 55%, ${theme.sakura} 100%)`,
+                backgroundImage: `linear-gradient(128deg, ${theme.crimson} 0%, ${theme.gold} 55%, ${theme.sakura} 100%)`,
                 WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                backgroundClip: "text", margin: 0,
+                backgroundClip: "text", color: "transparent", margin: 0,
               }}
             >
               Total clarity.
@@ -1517,10 +1511,20 @@ function Footer({ theme, navigate }) {
    ROOT
 ═══════════════════════════════════════════════════════ */
 export default function HomePage() {
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(() => {
+    try { return localStorage.getItem("orchestrai-theme") !== "light"; } catch { return true; }
+  });
   const [introComplete, setIntroComplete] = useState(false);
   const theme = isDark ? THEMES.dark : THEMES.light;
   const navigate = useNavigate();
+
+  const toggleTheme = useCallback(() => {
+    setIsDark(d => {
+      const next = !d;
+      try { localStorage.setItem("orchestrai-theme", next ? "dark" : "light"); } catch {}
+      return next;
+    });
+  }, []);
 
   const handleIntroComplete = useCallback(() => setIntroComplete(true), []);
   const STATUS_BAR_H = 28;
@@ -1578,7 +1582,7 @@ export default function HomePage() {
       >
         <Navbar
           isDark={isDark}
-          toggleTheme={() => setIsDark(p => !p)}
+          toggleTheme={toggleTheme}
           theme={theme}
           showStatusBar={true}
           navigate={navigate}

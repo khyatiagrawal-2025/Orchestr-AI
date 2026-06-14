@@ -380,8 +380,8 @@ export function Nav({ isDark, toggleTheme, theme, activePath }) {
     >
       {/* Logo */}
       <button
-        onClick={() => navigate("/")}
-        aria-label="Go to homepage"
+        onClick={() => navigate("/dashboard")}
+        aria-label="Go to dashboard"
         style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer" }}
       >
         <svg width="24" height="24" viewBox="0 0 30 30" fill="none">
@@ -461,6 +461,30 @@ export function Nav({ isDark, toggleTheme, theme, activePath }) {
             style={{ width: 16, height: 16, borderRadius: "50%", background: isDark ? "#F0EBE1" : "#0A0716", position: "absolute", top: 2 }}
           />
         </button>
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={() => navigate("/")}
+          style={{
+            background: "transparent",
+            border: `1px solid ${theme.borderSubtle}`,
+            borderRadius: 5,
+            padding: "4px 10px",
+            cursor: "pointer",
+            color: theme.textMuted,
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 9,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            fontWeight: 600,
+            transition: "all 0.2s",
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = theme.crimson; e.currentTarget.style.color = theme.text; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = theme.borderSubtle; e.currentTarget.style.color = theme.textMuted; }}
+        >
+          Exit Platform
+        </motion.button>
       </div>
     </motion.nav>
   );

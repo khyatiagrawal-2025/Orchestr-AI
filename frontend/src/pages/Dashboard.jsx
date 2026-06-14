@@ -1564,7 +1564,7 @@ function DashboardNav({isDark, toggleTheme, theme}) {
         })}
       </div>
 
-      {/* Right side — LIVE + toggle, same as AgentsPage */}
+      {/* Right side — LIVE + toggle + Exit Platform */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }} aria-label="System live">
           <motion.div animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}
@@ -1591,6 +1591,31 @@ function DashboardNav({isDark, toggleTheme, theme}) {
             style={{ width: 16, height: 16, borderRadius: "50%", background: isDark ? "#F0EBE1" : "#1A1028", position: "absolute", top: 2 }}
           />
         </button>
+
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={() => navigate("/")}
+          style={{
+            background: "transparent",
+            border: `1px solid ${theme.borderSubtle}`,
+            borderRadius: 5,
+            padding: "4px 10px",
+            cursor: "pointer",
+            color: theme.textMuted,
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 9,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            fontWeight: 600,
+            transition: "all 0.2s",
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = theme.crimson; e.currentTarget.style.color = theme.text; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = theme.borderSubtle; e.currentTarget.style.color = theme.textMuted; }}
+        >
+          Exit Platform
+        </motion.button>
       </div>
     </motion.nav>
   );
