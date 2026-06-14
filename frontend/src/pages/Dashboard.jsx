@@ -1489,6 +1489,7 @@ function DashboardNav({isDark, toggleTheme, theme}) {
     { label: "Agents",   path: "/agents" },
     { label: "Missions", path: "/missions" },
     { label: "Analytics",path: "/analytics" },
+    { label:"Orchestrate",path:"/orchestrate" },
   ];
 
   return (
@@ -1511,7 +1512,7 @@ function DashboardNav({isDark, toggleTheme, theme}) {
     >
       {/* Logo — identical to AgentsPage */}
       <button
-        onClick={() => navigate("/dashboard")}
+        onClick={() => navigate("/")}
         aria-label="OrchestrAI home"
         style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0 }}
       >

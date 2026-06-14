@@ -292,6 +292,7 @@ function Nav({ isDark, toggleTheme, theme }) {
     { label: "Agents",   path: "/agents" },
     { label: "Missions", path: "/missions" },
     { label: "Analytics",path: "/analytics" },
+    {label:"Orchestrate",path:"/orchestrate"},
   ];
 
   return (
@@ -309,7 +310,7 @@ function Nav({ isDark, toggleTheme, theme }) {
         borderBottom: `1px solid ${theme.borderSubtle}`,
       }}
     >
-      <button onClick={() => navigate("/dashboard")}
+      <button onClick={() => navigate("/")}
         style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer" }}>
         <svg width="24" height="24" viewBox="0 0 30 30" fill="none">
           <polygon points="15,2 28,9.5 28,20.5 15,28 2,20.5 2,9.5" stroke={theme.crimson} strokeWidth="1.5" fill="none" />
@@ -915,24 +916,23 @@ function CollaborationFeed({ theme }) {
   const scrollRef = useRef();
 
   useEffect(() => {
-    // Open a persistent listener pipeline straight to your stream endpoint
+    
     const ws = new WebSocket('ws://127.0.0.1:8000/api/v1/stream/ws/telemetry');
 
     ws.onmessage = (event) => {
       const logPacket = JSON.parse(event.data);
       const now = new Date();
-      const timestamp = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+      const ts = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-      // Dynamically append new incoming agent items directly into the scrolling terminal
       setItems(prev => [
-        ...prev.slice(-10), 
-        {
+        ...prev.slice(-12), 
+        { 
           id: Date.now() + Math.random(),
           from: logPacket.agent || "System",
           to: "Core Engine",
           icon: "◈→◬",
           msg: logPacket.message,
-          ts: timestamp
+          ts: ts 
         }
       ]);
     };
@@ -944,14 +944,20 @@ function CollaborationFeed({ theme }) {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [items]);
 
+
   const agentColor = (name) => AGENTS.find(a => a.name === name)?.color || theme.textMuted;
 
   return (
     <div ref={scrollRef} style={{ height: 240, overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
       {items.map((item, i) => (
-        <motion.div key={item.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.28 }}
+        <motion.div key={item.id}
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.28 }}
           style={{
-            display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 12px", borderRadius: 6,
+            display: "flex", alignItems: "flex-start", gap: 10,
+            padding: "9px 12px",
+            borderRadius: 6,
             background: i === items.length - 1 ? `rgba(${hex2rgb(agentColor(item.from))},0.05)` : "transparent",
             borderLeft: i === items.length - 1 ? `2px solid ${agentColor(item.from)}` : "2px solid transparent",
           }}>
