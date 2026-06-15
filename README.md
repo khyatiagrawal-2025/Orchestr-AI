@@ -64,7 +64,6 @@
 [![Three.js](https://img.shields.io/badge/Three.js-R3F-ffffff?style=flat-square&logo=threedotjs&logoColor=black&labelColor=0d1117)](https://threejs.org)
 [![Framer Motion](https://img.shields.io/badge/Framer_Motion-Latest-ff0055?style=flat-square&logo=framer&logoColor=white&labelColor=0d1117)](https://framer.com/motion)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white&labelColor=0d1117)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-BF8C2C?style=flat-square&labelColor=0d1117)](./LICENSE)
 [![FAR AWAY Hackathon](https://img.shields.io/badge/FAR_AWAY-Top_5_Qualifier-C4002B?style=flat-square&labelColor=0d1117)](https://github.com/khyatiagrawal-2025/Orchestr-AI)
 
 **Five agents. One command. Total clarity.**
@@ -515,7 +514,7 @@ The platform demonstrates something more broadly significant: **multi-agent AI s
 <tr>
 <td align="center" width="25%">
 
-**Ravi Ranjhan**
+**Ravi Ranjan**
 
 `Product & AI Architecture`
 
@@ -567,12 +566,6 @@ Grounds the platform in research-backed agent patterns and manages the infrastru
 </td>
 </tr>
 </table>
-
----
-
-## License
-
-MIT License — see [LICENSE](./LICENSE) for details.
 
 ---
 
