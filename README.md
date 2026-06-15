@@ -64,7 +64,7 @@
 [![Three.js](https://img.shields.io/badge/Three.js-R3F-ffffff?style=flat-square&logo=threedotjs&logoColor=black&labelColor=0d1117)](https://threejs.org)
 [![Framer Motion](https://img.shields.io/badge/Framer_Motion-Latest-ff0055?style=flat-square&logo=framer&logoColor=white&labelColor=0d1117)](https://framer.com/motion)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white&labelColor=0d1117)](https://python.org)
-[![FAR AWAY Hackathon](https://img.shields.io/badge/FAR_AWAYC4002B?style=flat-square&labelColor=0d1117)](https://github.com/khyatiagrawal-2025/Orchestr-AI)
+[![FAR AWAY Hackathon](https://img.shields.io/badge/FAR_AWAY-C4002B?style=flat-square&labelColor=0d1117)](https://github.com/khyatiagrawal-2025/Orchestr-AI)
 
 **Five agents. One command. Total clarity.**
 
