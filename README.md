@@ -55,7 +55,7 @@
   <text x="264" y="212" font-family="'Courier New', monospace" font-size="9" fill="#00B4D8" letter-spacing="1">UPTIME 99.97%</text>
   <circle cx="388" cy="208" r="4" fill="#C4002B"/>
   <text x="398" y="212" font-family="'Courier New', monospace" font-size="9" fill="#C4002B" letter-spacing="1">OPS LIVE</text>
-  <text x="876" y="212" font-family="'Courier New', monospace" font-size="8" fill="#555555" text-anchor="end">FAR AWAY HACKATHON · 2025</text>
+  <text x="876" y="212" font-family="'Courier New', monospace" font-size="8" fill="#555555" text-anchor="end">FAR AWAY HACKATHON · 2026</text>
 </svg>
 
 <br/>
