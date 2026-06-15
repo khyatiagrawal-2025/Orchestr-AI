@@ -431,9 +431,43 @@ Orchestr-AI/
 │       │   ├── MissionDossier.jsx    # 10-section intelligence brief
 │       │   └── AnalyticsPage.jsx     # Operational intelligence archive
 │       └── components/
-├── app/                              # Python backend — agent logic + API
-├── seed_data.py                      # Examination operations dataset seed
-└── requirements.txt
+│
+├── app/
+│   ├── __init__.py
+│   ├── main.py                 # Fast API App initialization & WebSocket setup
+│   │
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py           # Environment variables (DB URL, LLM Keys)
+│   │   └── database.py         # SQLAlchemy / PostGIS connection setup
+│   │
+│   ├── models/                 # SQLAlchemy Database Models
+│   │   ├── __init__.py
+│   │   ├── center.py
+│   │   ├── student.py
+│   │   ├── allocation.py
+│   │   └── audit_log.py
+│   │
+│   ├── schemas/                # Pydantic validation schemas for API validation
+│   │   ├── __init__.py
+│   │   ├── allocation.py
+│   │   └── analytics.py
+│   │
+│   ├── routers/                # API Endpoints grouped by domain
+│   │   ├── __init__.py
+│   │   ├── orchestrate.py      # Triggers the agents loop
+│   │   ├── analytics.py        # Stats for dashboard cards
+│   │   └── stream.py           # WebSockets for live mission control updates
+│   │
+│   └── agents/                 # The OrchestrAI Multi-Agent layer
+│       ├── __init__.py
+│       ├── engine.py           # Main workflow manager (LangGraph/State loop)
+│       ├── allocation_agent.py
+│       └── risk_agent.py
+│
+├── requirements.txt            # Dependencies
+                   
+└── seed_data.py                # Crucial mock data injector script
 ```
 
 ---
