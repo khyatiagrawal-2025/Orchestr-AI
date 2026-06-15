@@ -92,32 +92,21 @@ Every year, national-scale examinations — NEET, JEE, UPSC, and state equivalen
 
 ---
 
-## The Solution
-
-OrchestrAI is a **Mission-Control platform for examination operations** — a coordinated mesh of five specialized AI agents that perceive, reason, and act across every dimension of an examination simultaneously.
-
-Instead of replacing the human coordinator, OrchestrAI gives them **total situational awareness and zero-latency decision support.** Instead of one generalist model doing everything, five purpose-built agents operate as a collective intelligence — each expert in its domain, each informing the others.
-
-> *Five agents. One command. Total clarity.*
-
----
-
-
+## Screenshots
 
 <table>
 <tr>
 <td width="50%">
 
 ### Homepage — Operational Status Terminal
-
-The entry point is not a marketing page — it's an **operational status terminal.** Live system health, a real-time 3D agent lattice, and glassmorphic agent detail cards load before any navigation. The platform communicates its state from the first pixel.
+Live system health, 3D agent lattice, and glassmorphic agent cards. The platform communicates its operational state from the first pixel.
 
 `2,47,760 OPS/SEC · 5/5 AGENTS · 18ms LATENCY · 99.97% UPTIME`
 
 </td>
 <td width="50%">
 
-
+![Homepage](screenshots/homepage.png)
 
 </td>
 </tr>
@@ -125,15 +114,14 @@ The entry point is not a marketing page — it's an **operational status termina
 <td width="50%">
 
 ### Dashboard — Digital Twin
-
-18 examination centers rendered as a live operational network across 5 geographic regions. Color-coded health: **teal** = nominal, **gold** = elevated, **red** = critical. The Orchestration Core pulses at the center of the map.
+18 examination centers as a live operational network. **Teal** = nominal · **Gold** = elevated · **Red** = critical.
 
 `18/18 Centers · 81.4% Capacity · 4 Risk Nodes · Active Flows`
 
 </td>
 <td width="50%">
 
-
+![Dashboard](screenshots/dashboard.png)
 
 </td>
 </tr>
@@ -141,13 +129,12 @@ The entry point is not a marketing page — it's an **operational status termina
 <td width="50%">
 
 ### Orchestrate — Command Execution
-
-Three simultaneous panels: mission configuration form, a React Three Fiber 3D agent execution core, and a live digital twin operational map. Agents execute with visible reasoning streams — not a progress bar, a genuine operational picture.
+Three simultaneous panels: mission config form, 3D agent execution core, and live digital twin map. Agents execute with visible reasoning streams.
 
 </td>
 <td width="50%">
 
-
+![Orchestrate](screenshots/orchestrate.png)
 
 </td>
 </tr>
@@ -155,14 +142,14 @@ Three simultaneous panels: mission configuration form, a React Three Fiber 3D ag
 <td width="50%">
 
 ### Agents — Intelligence Mesh
+Force-directed network with deep-detail expansion panels. Live metrics per agent: confidence, load, decisions today, latency.
 
-Force-directed agent network with deep-detail expansion panels. Each agent surfaces live metrics: decision confidence, agent load, decisions generated today, latency, and connected agent topology.
-
-`Intelligence Agent: 99% confidence · 91% load · 683 decisions · 12ms`
+`Intelligence Agent: 99% confidence · 683 decisions · 12ms`
 
 </td>
 <td width="50%">
 
+![Agents](screenshots/agents.png)
 
 </td>
 </tr>
@@ -170,31 +157,37 @@ Force-directed agent network with deep-detail expansion panels. Each agent surfa
 <td width="50%">
 
 ### Analytics — Operational Intelligence Archive
+Every metric traces to a specific autonomous agent decision. Not estimates — actual outputs from NEET 2027.
 
-Post-mission outcomes rendered as a precision intelligence brief. Every metric traces to a specific autonomous agent decision — not estimates, actual agent outputs from NEET 2027.
+`12 Missions · 28,647 Decisions · 0 Human Interventions`
 
 </td>
 <td width="50%">
 
+![Analytics](screenshots/analytics.png)
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### Mission Dossier — Classified Intelligence Brief
+### Mission Control — Command Layer
+The central command node synthesizes all agent intelligence into a unified operational picture. Every decision flows through here.
 
-A scroll-driven 10-section narrative arc presenting a completed mission as a classified intelligence document — from mission header through executive conclusions and forward projections.
+`14ms Latency · 247K/s Throughput · 5 Active`
 
 </td>
 <td width="50%">
 
-
+![Mission Control](screenshots/dossier.png)
 
 </td>
 </tr>
-</table>
+<tr>
+<td width="50%">
 
+
+</table>
 ---
 
 ## Key Features
