@@ -102,7 +102,7 @@ Instead of replacing the human coordinator, OrchestrAI gives them **total situat
 
 ---
 
-// ## Screenshots
+
 
 <table>
 <tr>
