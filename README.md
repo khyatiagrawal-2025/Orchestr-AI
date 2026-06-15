@@ -102,7 +102,7 @@ Instead of replacing the human coordinator, OrchestrAI gives them **total situat
 
 ---
 
-## Screenshots
+// ## Screenshots
 
 <table>
 <tr>
@@ -117,7 +117,7 @@ The entry point is not a marketing page — it's an **operational status termina
 </td>
 <td width="50%">
 
-![Homepage](screenshots/homepage.png)
+
 
 </td>
 </tr>
@@ -133,7 +133,7 @@ The entry point is not a marketing page — it's an **operational status termina
 </td>
 <td width="50%">
 
-![Dashboard](screenshots/dashboard.png)
+
 
 </td>
 </tr>
@@ -147,7 +147,7 @@ Three simultaneous panels: mission configuration form, a React Three Fiber 3D ag
 </td>
 <td width="50%">
 
-![Orchestrate](screenshots/orchestrate.png)
+
 
 </td>
 </tr>
@@ -163,7 +163,6 @@ Force-directed agent network with deep-detail expansion panels. Each agent surfa
 </td>
 <td width="50%">
 
-![Agents](screenshots/agents.png)
 
 </td>
 </tr>
@@ -177,7 +176,6 @@ Post-mission outcomes rendered as a precision intelligence brief. Every metric t
 </td>
 <td width="50%">
 
-![Analytics](screenshots/analytics.png)
 
 </td>
 </tr>
@@ -191,7 +189,7 @@ A scroll-driven 10-section narrative arc presenting a completed mission as a cla
 </td>
 <td width="50%">
 
-![Dossier](screenshots/dossier.png)
+
 
 </td>
 </tr>
